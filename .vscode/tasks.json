@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "options": {      
+          "cwd": "${workspaceFolder}"
+    },
+    "tasks": [
+        {
+            "label": "cmake tp_pipeline_demo",
+            "type": "shell",
+            "command": "D:\\ProgramFiles\\CMake\\bin\\cmake.exe",
+            "args": [
+                "-G",
+                "Unix Makefiles",
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "${workspaceFolder}/examples/tp_pipeline_demo",
+                "-B",
+                "${workspaceFolder}/examples/tp_pipeline_demo/build"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "make",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "type": "shell",
+            "command": "mingw32-make",
+            "args": [
+                "-j8"
+            ]
+        }
+    ]
+}
