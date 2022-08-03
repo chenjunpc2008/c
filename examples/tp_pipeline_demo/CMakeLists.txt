@@ -31,8 +31,8 @@ INCLUDE_DIRECTORIES(./)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 
 # 添加子代码路径
-aux_source_directory(../../src/thread_pool_base DIR_SRCS)
-aux_source_directory(../../src/thread_pool_pipeline DIR_SRCS)
+aux_source_directory(../../src/threadpool/thread_pool_base DIR_SRCS)
+aux_source_directory(../../src/threadpool/thread_pool_pipeline DIR_SRCS)
 
 set(OTHER_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/util/tool_string/sof_string.cpp

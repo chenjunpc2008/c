@@ -4,8 +4,8 @@
 #include <vector>
 #include <iostream>
 
-#include "thread_pool_base/TaskBase.h"
-#include "thread_pool_base/ThreadPoolBase.h"
+#include "threadpool/thread_pool_base/TaskBase.h"
+#include "threadpool/thread_pool_base/ThreadPoolBase.h"
 #include "PipeLine_Thread.h"
 #include "util/tool_string/sof_string.h"
 

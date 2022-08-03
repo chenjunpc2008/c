@@ -4,9 +4,9 @@
 #include <vector>
 #include <iostream>
 
-#include "thread_pool_base/ThreadPoolBase.h"
+#include "threadpool/thread_pool_base/TaskBase.h"
+#include "threadpool/thread_pool_base/ThreadPoolBase.h"
 #include "LoopWorker_Thread.h"
-#include "thread_pool_base/TaskBase.h"
 
 class LoopWorker_ThreadPool : public ThreadPoolBase<LoopWorker_Thread>
 {

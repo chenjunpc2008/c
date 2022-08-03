@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "thread_pool_base/ThreadPoolBase.h"
-#include "thread_pool_pipeline/PipeLine_ThreadPool.h"
+#include "threadpool/thread_pool_base/ThreadPoolBase.h"
+#include "threadpool/thread_pool_pipeline/PipeLine_ThreadPool.h"
 
 using namespace std;
 
