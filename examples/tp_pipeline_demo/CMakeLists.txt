@@ -41,7 +41,8 @@ set(OTHER_SRCS
 SET(EXECUTABLE_OUTPUT_PATH ../)
 
 #
-LINK_LIBRARIES(pthread
+LINK_LIBRARIES(
+    pthread
 )
 
 add_executable(tppl_demo ${MAIN_SRCS} ${DIR_SRCS} ${OTHER_SRCS})
