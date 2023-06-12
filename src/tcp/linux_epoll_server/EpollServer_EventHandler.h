@@ -12,8 +12,8 @@
 #include "tcp/socket_conn_manage_base/ConnectionInformation.h"
 #include "tcp/socket_conn_manage_base/EventBaseHandler.h"
 #include "tcp/socket_conn_manage_base/SocketServiceBase.h"
-#include "tcp/linux_epoll_server/Epoll_Socket_Connection.h"
-#include "tcp/linux_epoll_server/Epoll_ConnectionManager.h"
+#include "tcp/socket_conn_manage_base/Epoll_ConnectionManager.h"
+#include "tcp/socket_conn_manage_base/Epoll_Socket_Connection.h"
 
 class EpollServer_Core;
 

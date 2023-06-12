@@ -14,13 +14,13 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-#include "thread_pool_base/ThreadBase.h"
+#include "threadpool/thread_pool_base/ThreadBase.h"
 
 #include "tcp/linux_socket_base/LinuxNetUtil.h"
 #include "tcp/socket_conn_manage_base/EventBaseHandler.h"
 
-#include "Epoll_ConnectionManager.h"
 #include "EpollServer_Client_ThreadPool.h"
+#include "tcp/socket_conn_manage_base/Epoll_ConnectionManager.h"
 
 /*
 TCP Server 用来 listen accept以及管理用户连接的线程
@@ -30,13 +30,11 @@ class EpollServer_Core : public ThreadBase
     //
     // Members
     //
-public:
+  public:
     // client connection manager
     Epoll_ConnectionManager m_connectionManager;
 
-protected:
-    std::mutex m_cidMutex;
-
+  protected:
     int m_listenfd;
 
     std::shared_ptr<EpollServer_EventHandler> m_pEventHandler;
@@ -48,11 +46,15 @@ protected:
     // listen back log
     int m_iListenBacklog;
 
+    // std::mutex m_cidMutex;
+    // uint64_t m_currentId;
+
     //
     // Functions
     //
-public:
-    EpollServer_Core(const int ciClientThreadNums, std::shared_ptr<EpollServer_EventHandler> pEventHandler);
+  public:
+    EpollServer_Core(const int ciClientThreadNums,
+                     std::shared_ptr<EpollServer_EventHandler> pEventHandler);
     virtual ~EpollServer_Core();
 
     int StartServer(const unsigned int in_port, const int in_backlog);
@@ -111,7 +113,7 @@ public:
     */
     void Disconnect(uint64_t cid);
 
-protected:
+  protected:
     /*
     启动线程
 
@@ -123,7 +125,7 @@ protected:
 
     static void *Run(void *pParam);
 
-private:
+  private:
     // 禁用默认构造函数
     EpollServer_Core();
 };

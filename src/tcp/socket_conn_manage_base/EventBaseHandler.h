@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <vector>
 
-#include "socket_conn_manage_base/ConnectionInformation.h"
-#include "socket_conn_manage_base/SocketServiceBase.h"
+#include "tcp/socket_conn_manage_base/ConnectionInformation.h"
+#include "tcp/socket_conn_manage_base/SocketServiceBase.h"
 
 /*
 event call back
@@ -28,13 +28,11 @@ public:
     This callback is invoked asynchronously when a data packet is received
     for a particular connection.
 
-    @param[in] cid
-    A unique Id that represents the connection.
+    @param[in] cid : A unique Id that represents the connection.
     This is the unique key that may be used for bookkeeping, and will remain
     valid until OnDisconnect is called.
 
-    @param[in] data
-    The received data packet from the connection. This packet buffer is
+    @param[in] data : The received data packet from the connection. This packet buffer is
     used by IOCP, and must not be kept or modified.
 
     @remark
@@ -53,13 +51,11 @@ public:
     call to keep sending data. This call is merely used for bookkeeping
     purposes.
 
-    @param[in,out] cid
-    A unique Id that represents the connection.
+    @param[in,out] cid : A unique Id that represents the connection.
     This is the unique key that may be used for bookkeeping, and will remain
     valid until OnDisconnect is called.
 
-    @param[in,out] byteTransferred
-    Number of bytes that has just been transferred.
+    @param[in,out] byteTransferred : Number of bytes that has just been transferred.
 
     @remark
     This callback is invoked through the context of an IOCP thread, which
@@ -91,13 +87,11 @@ public:
     through one of the IOCP thread. The connection is then fully
     terminated.
 
-    @param[in] cid
-    A unique Id that represents the connection.
+    @param[in] cid :  A unique Id that represents the connection.
     This is the unique key that may be used for bookkeeping, and will remain
     valid until OnDisconnect is called.
 
-    @param[in] errorcode
-    Error code for the disconnect
+    @param[in] errorcode : Error code for the disconnect
 
     @remark
     This callback is invoked through the context of an IOCP thread, which
@@ -118,12 +112,10 @@ public:
     For every connection that invoked OnNewConnection, there will be
     a corresponding OnDisconnect called.
 
-    @param[in] cid
-    A unique Id that represents the connection.
+    @param[in] cid : A unique Id that represents the connection.
     The connection id is no longer valid after this call.
 
-    @param[in] errorcode
-    Error code for the disconnect
+    @param[in] errorcode : Error code for the disconnect
 
     @remark
     This callback is invoked through the context of an IOCP thread, which
@@ -138,8 +130,7 @@ public:
     all connections are gone, and the server has closed the io completion
     port.
 
-    @param[in,out] errorCode
-    Error code when the server exits.
+    @param[in,out] errorCode : Error code when the server exits.
 
     @remark
     This callback is invoked through the context of an IOCP thread, which
@@ -148,14 +139,18 @@ public:
     virtual void OnServerClose(int errorCode);
 
     /*
+    OnEvent
+    */
+    virtual void OnEvent(const std::string &msg);
+
+    /*
     @details
     This callback is invoked asynchronously when the server or client encounter any
     type of errors after it has been initialized. Errors may or may not be
     fatal, and it is up to the user to decide whether or not to shut down
     the server or client.
 
-    @param[in] errorCode
-    The error code that encountered.
+    @param[in] errorCode : The error code that encountered.
 
     @remark
     This callback is invoked through the context of an IOCP thread, which

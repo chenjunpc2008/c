@@ -102,13 +102,10 @@ DWORD WINAPI IOCP_Thread_Client::Run(LPVOID pParam)
     }
 
     /*
-    if (!EzLog::LogLvlFilter(trace))
-    {
     string strTran;
-    string strDebug("thread finished id=");
-    strDebug += sof_string::itostr((uint64_t)pThread->m_dThreadId, strTran);
-    EzLog::Out(ftag, trace, strDebug );
-    }
+    string sDebug("thread finished id=");
+    sDebug += sof_string::itostr((uint64_t)pThread->m_dThreadId, strTran);
+    cout << ftag << "trace " <<  sDebug << endl;
     */
 
     pThread->m_emThreadState = ThreadPool_Conf::STOPPED;
@@ -167,9 +164,9 @@ void IOCP_Thread_Client::HandleIocpContext(IocpContext &iocpContext,
 
     default:
         string strTran;
-        string strDebug = "unkown type: ";
-        strDebug += sof_string::itostr(iocpContext.m_type, strTran);
-        EzLog::e(ftag, strDebug);
+        string sDebug = "unkown type: ";
+        sDebug += sof_string::itostr(iocpContext.m_type, strTran);
+        cout << ftag << "error " << sDebug << endl;
         break;
     }
 }
@@ -183,9 +180,9 @@ void IOCP_Thread_Client::HandleReceive(IocpContext &rcvContext, DWORD bytesTrans
     if (NULL == c)
     {
         string strTran;
-        string strDebug = "getConnection NULL id= ";
-        strDebug += sof_string::itostr(rcvContext.m_cid, strTran);
-        EzLog::w(ftag, strDebug);
+        string sDebug = "getConnection NULL id= ";
+        sDebug += sof_string::itostr(rcvContext.m_cid, strTran);
+        cout << ftag << "warn " << sDebug << endl;
         return;
     }
 

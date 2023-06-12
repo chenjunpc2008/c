@@ -6,9 +6,10 @@
 
 #include <iostream>
 
-#include "tool_string/sof_string.h"
+#include "util/tool_string/sof_string.h"
 
-#include "socket_conn_manage_base/ConnectionInformation.h"
+#include "tcp/socket_conn_manage_base/ConnectionInformation.h"
+#include "EpollClient_Core.h"
 
 using namespace std;
 

@@ -16,7 +16,7 @@ namespace WinSock_Client
         static const string ftag("CreateClientSocket() ");
 
         string strTran;
-        string strDebug;
+        string sDebug;
 
         // sockaddr_in service;
 
@@ -53,12 +53,12 @@ namespace WinSock_Client
         out_clientSocket = hClientSocket;
 
         {
-            strDebug = "connect success on address: ";
-            strDebug += strIp;
-            strDebug += ":";
-            strDebug += sof_string::itostr(port, strTran);
+            sDebug = "connect success on address: ";
+            sDebug += strIp;
+            sDebug += ":";
+            sDebug += sof_string::itostr(port, strTran);
 
-            cout << ftag << strDebug << endl;
+            cout << ftag << sDebug << endl;
         }
 
         return 0;

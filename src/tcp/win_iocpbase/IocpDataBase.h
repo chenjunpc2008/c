@@ -37,7 +37,9 @@ public:
     //
 public:
     IocpDataBase(void)
-        : m_hCompletePort(INVALID_HANDLE_VALUE), m_acceptContext(INVALID_SOCKET, 0, IocpContext::Accept, Win_IOCP::ciDefaultRcvBufferSize), m_rcvBufferSize(Win_IOCP::ciDefaultRcvBufferSize), m_currentId(0)
+        : m_hCompletePort(INVALID_HANDLE_VALUE),
+          m_acceptContext(INVALID_SOCKET, 0, IocpContext::Accept, Win_IOCP::ciDefaultRcvBufferSize),
+          m_rcvBufferSize(Win_IOCP::ciDefaultRcvBufferSize), m_currentId(0)
     {
     }
 

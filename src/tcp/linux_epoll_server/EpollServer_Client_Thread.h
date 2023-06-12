@@ -15,7 +15,7 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-#include "thread_pool_base/ThreadBase.h"
+#include "threadpool/thread_pool_base/ThreadBase.h"
 #include "tcp/linux_epoll_server/EpollServer_EventHandler.h"
 
 /*
@@ -36,7 +36,7 @@ public:
 protected:
     int m_epollfd;
 
-    atomic<unsigned long long> m_aullClientNums;
+    std::atomic<unsigned long long> m_aullClientNums;
 
     std::shared_ptr<EpollServer_EventHandler> m_pEventHandler;
 

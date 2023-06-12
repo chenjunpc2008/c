@@ -5,16 +5,14 @@
 // linux only
 #else
 
-#include <string>
-#include <stdint.h>
-#include <sys/socket.h>
 #include <memory.h>
-#include <vector>
 #include <mutex>
+#include <stdint.h>
+#include <string>
+#include <sys/socket.h>
+#include <vector>
 
-#include "config/conf_net_msg.h"
-
-#include "socket_conn_manage_base/ConnectionInformation.h"
+#include "tcp/socket_conn_manage_base/ConnectionInformation.h"
 
 #include "Epoll_SendQueue.h"
 
@@ -26,7 +24,7 @@ class Epoll_Socket_Connection
     //
     // Members
     //
-public:
+  public:
     // socket file handle
     int m_socketfd;
 
@@ -54,16 +52,16 @@ public:
     // 接收消息缓存
     // struct simutgw::SocketUserMessage m_rcvSocketMsg;
 
-protected:
+  protected:
     // 下一条发送消息序号
     uint64_t m_ui64NextSendSeq;
 
     //
     // Functions
     //
-public:
-    Epoll_Socket_Connection(const int socketfd,
-                            const uint64_t cid, const struct ConnectionInformation &cinfo, const int epollfd);
+  public:
+    Epoll_Socket_Connection(const int socketfd, const uint64_t cid,
+                            const struct ConnectionInformation &cinfo, const int epollfd);
 
     virtual ~Epoll_Socket_Connection();
 
@@ -90,11 +88,12 @@ public:
     @return 0 : 成功
     @return -1 : 失败，此情况有可能是epoll handle失效，或者socketfd失效(此时需要关闭客户端连接)
     */
-    int AddSend(std::shared_ptr<std::vector<uint8_t>> &in_pSendData, int &out_errno, int &out_cid, int &out_sockfd);
+    int AddSend(std::shared_ptr<std::vector<uint8_t>> &in_pSendData, int &out_errno, int &out_cid,
+                int &out_sockfd);
 
     int LoopSend(uint64_t &out_byteTransferred, int &out_errno, int &out_cid, int &out_sockfd);
 
-protected:
+  protected:
     // 禁止使用默认构造函数
     Epoll_Socket_Connection();
 };

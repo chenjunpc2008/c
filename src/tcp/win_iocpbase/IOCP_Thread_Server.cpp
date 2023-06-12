@@ -1,20 +1,16 @@
 ﻿#include "IOCP_Thread_Server.h"
 
-#include "WinSockUtil.h"
-#include "IOCPUtil.h"
-#include "socket_conn_manage_base/ConnectionInformation.h"
 #include "Connection.h"
+#include "IOCPUtil.h"
 #include "IocpData_Server.h"
+#include "WinSockUtil.h"
+#include "socket_conn_manage_base/ConnectionInformation.h"
 
 using namespace std;
 
-IOCP_Thread_Server::IOCP_Thread_Server(void)
-{
-}
+IOCP_Thread_Server::IOCP_Thread_Server(void) {}
 
-IOCP_Thread_Server::~IOCP_Thread_Server(void)
-{
-}
+IOCP_Thread_Server::~IOCP_Thread_Server(void) {}
 
 void IOCP_Thread_Server::SetIocpData(std::shared_ptr<IocpData_Server> &pIocpdata)
 {
@@ -55,20 +51,14 @@ DWORD WINAPI IOCP_Thread_Server::Run(LPVOID pParam)
         BOOL completionStatus = false;
 #ifdef _WIN64
         // _WIN64 __amd64
-        completionStatus = GetQueuedCompletionStatus(
-            pThread->m_pIocpdataServer->m_hCompletePort,
-            &dwBytesTransfered,
-            (PULONG_PTR)&key,
-            &pOverlapped,
-            INFINITE);
+        completionStatus =
+            GetQueuedCompletionStatus(pThread->m_pIocpdataServer->m_hCompletePort,
+                                      &dwBytesTransfered, (PULONG_PTR)&key, &pOverlapped, INFINITE);
 #else
 #ifdef WIN32
-        completionStatus = GetQueuedCompletionStatus(
-            pThread->m_pIocpdataServer->m_hCompletePort,
-            &dwBytesTransfered,
-            (LPDWORD)&key,
-            &pOverlapped,
-            INFINITE);
+        completionStatus =
+            GetQueuedCompletionStatus(pThread->m_pIocpdataServer->m_hCompletePort,
+                                      &dwBytesTransfered, (LPDWORD)&key, &pOverlapped, INFINITE);
 #else
         perror("IOCP_Thread_Server::Run() unkown platform!!!");
 #endif
@@ -89,8 +79,7 @@ DWORD WINAPI IOCP_Thread_Server::Run(LPVOID pParam)
         }
 
         //
-        IocpContext &iocpContext =
-            *reinterpret_cast<IocpContext *>(pOverlapped);
+        IocpContext &iocpContext = *reinterpret_cast<IocpContext *>(pOverlapped);
 
         pThread->HandleIocpContext(iocpContext, dwBytesTransfered);
 
@@ -102,13 +91,10 @@ DWORD WINAPI IOCP_Thread_Server::Run(LPVOID pParam)
     }
 
     /*
-    if (!EzLog::LogLvlFilter(trace))
-    {
     string strTran;
-    string strDebug("thread finished id=");
-    strDebug += sof_string::itostr((uint64_t)pThread->m_dThreadId, strTran);
-    EzLog::Out(ftag, trace, strDebug );
-    }
+    string sDebug("thread finished id=");
+    sDebug += sof_string::itostr((uint64_t)pThread->m_dThreadId, strTran);
+   cout << ftag << "trace " << sDebug << endl;
     */
 
     pThread->m_emThreadState = ThreadPool_Conf::STOPPED;
@@ -117,8 +103,7 @@ DWORD WINAPI IOCP_Thread_Server::Run(LPVOID pParam)
     return 0;
 }
 
-void IOCP_Thread_Server::HandleCompletionFailure(OVERLAPPED *overlapped,
-                                                 DWORD bytesTransferred,
+void IOCP_Thread_Server::HandleCompletionFailure(OVERLAPPED *overlapped, DWORD bytesTransferred,
                                                  int error)
 {
     static const string ftag("IOCP_Thread_Server::HandleCompletionFailure() ");
@@ -127,8 +112,7 @@ void IOCP_Thread_Server::HandleCompletionFailure(OVERLAPPED *overlapped,
     {
         // Process a failed completed I/O request
         // dwError contains the reason for failure
-        IocpContext &iocpContext =
-            *reinterpret_cast<IocpContext *>(overlapped);
+        IocpContext &iocpContext = *reinterpret_cast<IocpContext *>(overlapped);
         HandleIocpContext(iocpContext, bytesTransferred);
     }
     else
@@ -146,8 +130,7 @@ void IOCP_Thread_Server::HandleCompletionFailure(OVERLAPPED *overlapped,
     }
 }
 
-void IOCP_Thread_Server::HandleIocpContext(IocpContext &iocpContext,
-                                           DWORD bytesTransferred)
+void IOCP_Thread_Server::HandleIocpContext(IocpContext &iocpContext, DWORD bytesTransferred)
 {
     static const string ftag("IOCP_Thread_Server::HandleIocpContext() ");
 
@@ -171,9 +154,9 @@ void IOCP_Thread_Server::HandleIocpContext(IocpContext &iocpContext,
 
     default:
         string strTran;
-        string strDebug = "unkown type: ";
-        strDebug += sof_string::itostr(iocpContext.m_type, strTran);
-        EzLog::e(ftag, strDebug);
+        string sDebug = "unkown type: ";
+        sDebug += sof_string::itostr(iocpContext.m_type, strTran);
+        cout << ftag << "error " << sDebug << endl;
         break;
     }
 }
@@ -188,9 +171,9 @@ void IOCP_Thread_Server::HandleAccept(IocpContext &acceptContext, DWORD bytesTra
     if (0 == bytesTransferred)
     {
         // string strTran;
-        // string strDebug = "bytesTransferred = ";
-        // strDebug += sof_string::itostr((uint64_t)bytesTransferred, strTran);
-        // EzLog::w(ftag, strDebug);
+        // string sDebug = "bytesTransferred = ";
+        // sDebug += sof_string::itostr((uint64_t)bytesTransferred, strTran);
+        // cout << ftag << "warn " << sDebug << endl;
     }
 
     // Update the socket option with SO_UPDATE_ACCEPT_CONTEXT so that
@@ -212,25 +195,25 @@ void IOCP_Thread_Server::HandleAccept(IocpContext &acceptContext, DWORD bytesTra
     // If the socket is up, allocate the connection and notify the client.
     else
     {
-        struct ConnectionInformation cinfo = WinSockUtil::GetConnectionInformation(acceptContext.m_socket);
+        struct ConnectionInformation cinfo =
+            WinSockUtil::GetConnectionInformation(acceptContext.m_socket);
 
-        std::shared_ptr<Connection> c(new Connection(
-            acceptContext.m_socket,
-            m_pIocpdataServer->GetNextId(),
-            m_pIocpdataServer->m_rcvBufferSize));
+        std::shared_ptr<Connection> c(new Connection(acceptContext.m_socket,
+                                                     m_pIocpdataServer->GetNextId(),
+                                                     m_pIocpdataServer->m_rcvBufferSize));
 
         /*
         // 接收缓冲区
         int nRecvBuf = 256 * 1024;//设置为32K
-        int iSetSocket = setsockopt(acceptContext.m_socket, SOL_SOCKET, SO_RCVBUF, (const char*)&nRecvBuf, sizeof(int));
-        if (0 != iSetSocket)
+        int iSetSocket = setsockopt(acceptContext.m_socket, SOL_SOCKET, SO_RCVBUF, (const
+        char*)&nRecvBuf, sizeof(int)); if (0 != iSetSocket)
         {
         int i = 0;
         }
         //发送缓冲区
         int nSendBuf = 256 * 1024;//设置为32K
-        iSetSocket = setsockopt(acceptContext.m_socket, SOL_SOCKET, SO_SNDBUF, (const char*)&nSendBuf, sizeof(int));
-        if (0 != iSetSocket)
+        iSetSocket = setsockopt(acceptContext.m_socket, SOL_SOCKET, SO_SNDBUF, (const
+        char*)&nSendBuf, sizeof(int)); if (0 != iSetSocket)
         {
         int i = 0;
         }
@@ -239,7 +222,8 @@ void IOCP_Thread_Server::HandleAccept(IocpContext &acceptContext, DWORD bytesTra
         m_pIocpdataServer->m_connectionManager.AddConnection(c);
 
         uint64_t iErr = 0;
-        IOCPUtil::RegisterIocpHandle((HANDLE)c->m_socket, (std::shared_ptr<IocpDataBase>)m_pIocpdataServer, iErr);
+        IOCPUtil::RegisterIocpHandle((HANDLE)c->m_socket,
+                                     (std::shared_ptr<IocpDataBase>)m_pIocpdataServer, iErr);
 
         if (NULL != m_pIocpdataServer->m_pIocpHandler)
         {
@@ -289,9 +273,9 @@ void IOCP_Thread_Server::HandleReceive(IocpContext &rcvContext, DWORD bytesTrans
     if (NULL == c)
     {
         string strTran;
-        string strDebug = "getConnection NULL id= ";
-        strDebug += sof_string::itostr(rcvContext.m_cid, strTran);
-        EzLog::w(ftag, strDebug);
+        string sDebug = "getConnection NULL id= ";
+        sDebug += sof_string::itostr(rcvContext.m_cid, strTran);
+        cout << ftag << "warn " << sDebug << endl;
         return;
     }
 
@@ -307,9 +291,7 @@ void IOCP_Thread_Server::HandleReceive(IocpContext &rcvContext, DWORD bytesTrans
         if (NULL != m_pIocpdataServer->m_pIocpHandler)
         {
             // Invoke the callback for the client
-            m_pIocpdataServer->m_pIocpHandler->OnReceiveData(
-                rcvContext.m_cid,
-                rcvContext.m_data);
+            m_pIocpdataServer->m_pIocpHandler->OnReceiveData(rcvContext.m_cid, rcvContext.m_data);
         }
     }
 
@@ -404,8 +386,7 @@ void IOCP_Thread_Server::HandleDisconnect(IocpContext &iocpContext)
     // be deleted manually at all times.
     delete &iocpContext;
 
-    std::shared_ptr<Connection> c =
-        m_pIocpdataServer->m_connectionManager.GetConnection(cid);
+    std::shared_ptr<Connection> c = m_pIocpdataServer->m_connectionManager.GetConnection(cid);
     if (c == NULL)
     {
         //! @remark

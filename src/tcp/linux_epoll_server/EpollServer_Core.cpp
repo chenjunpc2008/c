@@ -4,15 +4,16 @@
 // linux only
 #else
 
-#include "Epoll_Socket_Connection.h"
+#include "tcp/socket_conn_manage_base/Epoll_Socket_Connection.h"
 
 #include "tcp/linux_socket_base/LinuxNetUtil.h"
 
 using namespace std;
 
-EpollServer_Core::EpollServer_Core(const int ciClientThreadNums, std::shared_ptr<EpollServer_EventHandler> pEventHandler)
-    : m_listenfd(-1), m_pEventHandler(pEventHandler), m_clientProcs(ciClientThreadNums, pEventHandler),
-      m_uiListenPort(0), m_iListenBacklog(10)
+EpollServer_Core::EpollServer_Core(const int ciClientThreadNums,
+                                   std::shared_ptr<EpollServer_EventHandler> pEventHandler)
+    : m_listenfd(-1), m_pEventHandler(pEventHandler),
+      m_clientProcs(ciClientThreadNums, pEventHandler), m_uiListenPort(0), m_iListenBacklog(10)
 {
     // ctor
     if (NULL != pEventHandler)
@@ -28,7 +29,13 @@ EpollServer_Core::~EpollServer_Core()
 
 int EpollServer_Core::StartServer(const unsigned int in_port, const int in_backlog)
 {
-    // static const std::string ftag("EpollServer_Core::StartServer() ");
+    static const std::string ftag("EpollServer_Core::StartServer() ");
+
+    if (nullptr == m_pEventHandler)
+    {
+        cout << ftag << "nullptr event handler" << endl;
+        return -1;
+    }
 
     m_uiListenPort = in_port;
 
@@ -53,8 +60,8 @@ void EpollServer_Core::StopServer(void)
     NotifyStopThread_Immediate();
 
     {
-        string strDebug("Notified thread, wait a moment");
-        cout << ftag << strDebug << endl;
+        string sDebug("Notified thread, wait a moment");
+        cout << ftag << sDebug << endl;
     }
 
     // Sleep给线程退出时间
@@ -82,15 +89,14 @@ int EpollServer_Core::StartThread(void)
         return 0;
     }
 
+    string sDebug;
+
     int iRes = m_clientProcs.InitPool();
     if (0 != iRes)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strDebug = ftag;
-            strDebug += "InitPool failed";
-            m_pEventHandler->OnErrorStr(strDebug);
-        }
+        sDebug = ftag;
+        sDebug += "InitPool failed";
+        m_pEventHandler->OnErrorStr(sDebug);
 
         return -1;
     }
@@ -98,12 +104,9 @@ int EpollServer_Core::StartThread(void)
     iRes = m_clientProcs.StartPool();
     if (0 != iRes)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strDebug = ftag;
-            strDebug += "StartPool failed";
-            m_pEventHandler->OnErrorStr(strDebug);
-        }
+        sDebug = ftag;
+        sDebug += "StartPool failed";
+        m_pEventHandler->OnErrorStr(sDebug);
 
         return -1;
     }
@@ -112,25 +115,27 @@ int EpollServer_Core::StartThread(void)
     m_listenfd = LinuxNetUtil::CreateListenSocket(m_uiListenPort, m_iListenBacklog, iErr);
     if (0 > m_listenfd)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strDebug = ftag;
-            strDebug += "socket server create error";
-            m_pEventHandler->OnErrorCode(strDebug, iErr);
-        }
+        sDebug = ftag;
+        sDebug += "socket server create error";
+        m_pEventHandler->OnErrorCode(sDebug, iErr);
 
         return -1;
+    }
+
+    {
+        string sItoa;
+        sDebug = "listen socket in port=";
+        sDebug += sof_string::itostr(m_uiListenPort, sItoa);
+        sDebug += " success";
+        m_pEventHandler->OnEvent(sDebug);
     }
 
     iRes = ThreadBase::StartThread(&EpollServer_Core::Run);
     if (0 != iRes)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strDebug = ftag;
-            strDebug += "StartThread failed";
-            m_pEventHandler->OnErrorStr(strDebug);
-        }
+        sDebug = ftag;
+        sDebug += "StartThread failed";
+        m_pEventHandler->OnErrorStr(sDebug);
 
         return -1;
     }
@@ -145,6 +150,9 @@ void *EpollServer_Core::Run(void *pParam)
     EpollServer_Core *pThread = static_cast<EpollServer_Core *>(pParam);
 
     int iRes = 0;
+    int iErr = 0;
+    string sDebug;
+    string strTran;
 
     // 事件数组
     struct epoll_event eventList[4];
@@ -153,14 +161,11 @@ void *EpollServer_Core::Run(void *pParam)
     int epollfd = epoll_create(2);
     if (-1 == epollfd)
     {
-        int iErr = errno;
+        iErr = errno;
 
-        if (nullptr != pThread->m_pEventHandler)
-        {
-            string strDebug = ftag;
-            strDebug += "epoll_create error";
-            pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
-        }
+        sDebug = ftag;
+        sDebug += "epoll_create error";
+        pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
 
         return 0;
     }
@@ -173,17 +178,13 @@ void *EpollServer_Core::Run(void *pParam)
     iRes = epoll_ctl(epollfd, EPOLL_CTL_ADD, pThread->m_listenfd, &event);
     if (0 > iRes)
     {
-        int iErr = errno;
+        iErr = errno;
 
-        if (nullptr != pThread->m_pEventHandler)
-        {
-            string strTran;
-            string strDebug = ftag;
-            strDebug += "epoll add fail fd=";
-            strDebug += sof_string::itostr(pThread->m_listenfd, strTran);
+        sDebug = ftag;
+        sDebug += "epoll add fail fd=";
+        sDebug += sof_string::itostr(pThread->m_listenfd, strTran);
 
-            pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
-        }
+        pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
 
         return 0;
     }
@@ -197,18 +198,15 @@ void *EpollServer_Core::Run(void *pParam)
 
         if (0 > epwRet)
         {
-            int iErr = errno;
+            iErr = errno;
             if (EINTR == iErr)
             {
                 continue;
             }
 
-            if (nullptr != pThread->m_pEventHandler)
-            {
-                string strDebug = ftag;
-                strDebug += "epoll_wait error";
-                pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
-            }
+            sDebug = ftag;
+            sDebug += "epoll_wait error";
+            pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
 
             break;
         }
@@ -226,8 +224,7 @@ void *EpollServer_Core::Run(void *pParam)
             // 监测到一个SOCKET用户连接到了绑定的SOCKET端口，建立新的连接
             if (eventList[i].data.fd == pThread->m_listenfd)
             {
-                if ((EPOLLERR & eventList[i].events) ||
-                    (EPOLLHUP & eventList[i].events))
+                if ((EPOLLERR & eventList[i].events) || (EPOLLHUP & eventList[i].events))
                 {
                     // 发生错误
                     bFatalError = true;
@@ -238,12 +235,14 @@ void *EpollServer_Core::Run(void *pParam)
                 int iClientFd = -1;
                 string strClientAddr;
                 uint16_t uiClientPort = 0;
-                iRes = LinuxNetUtil::AcceptConn(pThread->m_listenfd, iClientFd, strClientAddr, uiClientPort);
+                iRes = LinuxNetUtil::AcceptConn(pThread->m_listenfd, iClientFd, strClientAddr,
+                                                uiClientPort, iErr);
                 if (0 == iRes)
                 {
                     // add to thread pool to process
                     int iClient_Epollfd = -1;
-                    iRes = pThread->m_clientProcs.AddNewClient(iClientFd, strClientAddr, uiClientPort, iClient_Epollfd);
+                    iRes = pThread->m_clientProcs.AddNewClient(iClientFd, strClientAddr,
+                                                               uiClientPort, iClient_Epollfd);
                     if (0 == iRes)
                     {
                         // add connection to manager
@@ -251,30 +250,26 @@ void *EpollServer_Core::Run(void *pParam)
                         cinfo.strRemoteIpAddress = strClientAddr;
                         cinfo.remotePortNumber = uiClientPort;
 
-                        shared_ptr<Epoll_Socket_Connection> c(new Epoll_Socket_Connection(iClientFd, iClientFd, cinfo, iClient_Epollfd));
+                        shared_ptr<Epoll_Socket_Connection> c(new Epoll_Socket_Connection(
+                            iClientFd, iClientFd, cinfo, iClient_Epollfd));
 
                         pThread->m_connectionManager.AddConnection(c);
 
-                        if (nullptr != pThread->m_pEventHandler)
-                        {
-                            pThread->m_pEventHandler->OnNewConnection(c->m_id, c->m_cinfo, c);
-                        }
+                        pThread->m_pEventHandler->OnNewConnection(c->m_id, c->m_cinfo, c);
                     }
                     else
                     {
-                        if (nullptr != pThread->m_pEventHandler)
                         {
-                            string strTran;
-                            string strDebug = ftag;
-                            strDebug += "ip=";
-                            strDebug += strClientAddr;
-                            strDebug += " port=";
-                            strDebug += sof_string::itostr(uiClientPort, strTran);
-                            strDebug += " fd=";
-                            strDebug += sof_string::itostr(iClientFd, strTran);
-                            strDebug += " add to client thread pool failed, closing";
+                            sDebug = ftag;
+                            sDebug += "ip=";
+                            sDebug += strClientAddr;
+                            sDebug += " port=";
+                            sDebug += sof_string::itostr(uiClientPort, strTran);
+                            sDebug += " fd=";
+                            sDebug += sof_string::itostr(iClientFd, strTran);
+                            sDebug += " add to client thread pool failed, closing";
 
-                            pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
+                            pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
                         }
 
                         close(iClientFd);
@@ -283,24 +278,22 @@ void *EpollServer_Core::Run(void *pParam)
                 else
                 {
                     // fd already closed by lower.
+                    pThread->m_pEventHandler->OnErrorCode("LinuxNetUtil::AcceptConn failed", iErr);
                 }
             }
-            else if ((EPOLLERR & eventList[i].events) ||
-                     (EPOLLHUP & eventList[i].events))
+            else if ((EPOLLERR & eventList[i].events) || (EPOLLHUP & eventList[i].events))
             {
-                int iErr = errno;
+                iErr = errno;
                 int sfd = eventList[i].data.fd;
 
                 close(eventList[i].data.fd);
 
-                if (nullptr != pThread->m_pEventHandler)
                 {
-                    string strTran;
-                    string strDebug = ftag;
-                    strDebug += "fd=";
-                    strDebug += sof_string::itostr(sfd, strTran);
+                    sDebug = ftag;
+                    sDebug += "fd=";
+                    sDebug += sof_string::itostr(sfd, strTran);
 
-                    pThread->m_pEventHandler->OnErrorCode(iErr);
+                    pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
                 }
 
                 continue;
@@ -325,10 +318,10 @@ void *EpollServer_Core::Run(void *pParam)
     /*
     {
     string strTran;
-    string strDebug("thread finished id=");
-    strDebug += sof_string::itostr((uint64_t)pThread->m_dThreadId, strTran);
+    string sDebug("thread finished id=");
+    sDebug += sof_string::itostr((uint64_t)pThread->m_dThreadId, strTran);
 
-    cout << ftag << strDebug << endl;
+    cout << ftag << sDebug << endl;
     }
     */
 
@@ -344,15 +337,13 @@ void EpollServer_Core::Send(uint64_t cid, std::shared_ptr<std::vector<uint8_t>> 
 
     if (nullptr == pdata)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strTran;
-            string strDebug = ftag;
-            strDebug += "trying to send empty message id=";
-            strDebug += sof_string::itostr(cid, strTran);
+        string strTran;
+        string sDebug = ftag;
+        sDebug += "trying to send empty message id=";
+        sDebug += sof_string::itostr(cid, strTran);
 
-            m_pEventHandler->OnErrorStr(strDebug);
-        }
+        m_pEventHandler->OnErrorStr(sDebug);
+
         return;
     }
 
@@ -376,10 +367,7 @@ void EpollServer_Core::Send(uint64_t cid, std::shared_ptr<std::vector<uint8_t>> 
     {
         m_connectionManager.RemoveConnection(cid);
 
-        if (nullptr != m_pEventHandler)
-        {
-            m_pEventHandler->OnDisconnect(cid, iErr);
-        }
+        m_pEventHandler->OnDisconnect(cid, iErr);
     }
 }
 
@@ -412,15 +400,12 @@ void EpollServer_Core::Shutdown(uint64_t cid, int how)
     std::shared_ptr<Epoll_Socket_Connection> pClientConn = m_connectionManager.GetConnection(cid);
     if (nullptr == pClientConn)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strTran;
-            string strDebug = ftag;
-            strDebug += "connection manage couldn't find id=";
-            strDebug += sof_string::itostr(cid, strTran);
+        string strTran;
+        string sDebug = ftag;
+        sDebug += "connection manage couldn't find id=";
+        sDebug += sof_string::itostr(cid, strTran);
 
-            m_pEventHandler->OnErrorStr(strDebug);
-        }
+        m_pEventHandler->OnErrorStr(sDebug);
 
         return;
     }
@@ -459,25 +444,19 @@ void EpollServer_Core::Disconnect(uint64_t cid)
     std::shared_ptr<Epoll_Socket_Connection> pClientConn = m_connectionManager.GetConnection(cid);
     if (nullptr == pClientConn)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strTran;
-            string strDebug = ftag;
-            strDebug += "connection manage couldn't find id=";
-            strDebug += sof_string::itostr(cid, strTran);
+        string strTran;
+        string sDebug = ftag;
+        sDebug += "connection manage couldn't find id=";
+        sDebug += sof_string::itostr(cid, strTran);
 
-            m_pEventHandler->OnErrorStr(strDebug);
-        }
+        m_pEventHandler->OnErrorStr(sDebug);
 
         return;
     }
 
     m_connectionManager.RemoveConnection(cid);
 
-    if (nullptr != m_pEventHandler)
-    {
-        m_pEventHandler->OnDisconnect(cid, 0);
-    }
+    m_pEventHandler->OnDisconnect(cid, 0);
 }
 
 #endif

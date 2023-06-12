@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include "thread_pool_base/ThreadPoolBase.h"
+#include "threadpool/thread_pool_base/ThreadPoolBase.h"
 #include "EpollServer_Client_Thread.h"
 
 class EpollServer_Core;
@@ -58,9 +58,9 @@ public:
             {
                 if (nullptr != m_pEventHandler)
                 {
-                    string strDebug = ftag;
-                    strDebug += "new ThreadBase() failed, NULL";
-                    m_pEventHandler->OnErrorStr(strDebug);
+                    std::string sDebug = ftag;
+                    sDebug += "new ThreadBase() failed, NULL";
+                    m_pEventHandler->OnErrorStr(sDebug);
                 }
 
                 return -1;
@@ -86,7 +86,7 @@ public:
     0 -- 成功
     -1 -- 失败
     */
-    int AddNewClient(const int in_clientfd, const string &in_remoteAddr, const uint16_t in_remotePort, int &out_epollfd)
+    int AddNewClient(const int in_clientfd, const std::string &in_remoteAddr, const uint16_t in_remotePort, int &out_epollfd)
     {
         static const std::string ftag("EpollServer_Client_ThreadPool::AddNewClient() ");
 
@@ -134,11 +134,12 @@ public:
         {
             if (nullptr != m_pEventHandler)
             {
-                string strDebug = ftag;
-                strDebug += "AddIfHaveTask() failed, res=";
-                strDebug += sof_string::itostr(iRes, strTran);
+                std::string sDebug = ftag;
+                std::string strTran;
+                sDebug += "AddIfHaveTask() failed, res=";
+                sDebug += sof_string::itostr(iRes, strTran);
 
-                m_pEventHandler->OnErrorStr(strDebug);
+                m_pEventHandler->OnErrorStr(sDebug);
             }
 
             return -1;

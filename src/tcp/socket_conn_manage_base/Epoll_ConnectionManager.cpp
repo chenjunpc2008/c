@@ -6,17 +6,13 @@
 
 #include <sys/socket.h>
 
-#include "tool_net/PacketAssembler.h"
+#include <unistd.h>
 
 using namespace std;
 
-Epoll_ConnectionManager::Epoll_ConnectionManager(void)
-{
-}
+Epoll_ConnectionManager::Epoll_ConnectionManager(void) {}
 
-Epoll_ConnectionManager::~Epoll_ConnectionManager(void)
-{
-}
+Epoll_ConnectionManager::~Epoll_ConnectionManager(void) {}
 
 void Epoll_ConnectionManager::AddConnection(std::shared_ptr<Epoll_Socket_Connection> client)
 {
@@ -24,13 +20,14 @@ void Epoll_ConnectionManager::AddConnection(std::shared_ptr<Epoll_Socket_Connect
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    std::pair<EpollConnMap_t::iterator, bool> ret = m_connMap.insert(
-        std::make_pair(client->m_id, client));
+    std::pair<EpollConnMap_t::iterator, bool> ret_cid =
+        m_connMap.insert(std::make_pair(client->m_id, client));
 
-    bool inserted = ret.second;
+    bool inserted = ret_cid.second;
     if (inserted)
     {
-        // cout << ftag << " id=" << client->m_id << " info " << client->m_cinfo.ToString() << endl;
+        // cout << ftag << " id=" << client->m_id << " info " <<
+        // client->m_cinfo.ToString() << endl;
     }
 }
 
@@ -38,14 +35,15 @@ bool Epoll_ConnectionManager::RemoveConnection(uint64_t clientId)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    if (0 < m_connMap.erase(clientId))
-    {
-        return true;
-    }
-    else
+    EpollConnMap_t::const_iterator cit = m_connMap.find(clientId);
+    if (m_connMap.end() == cit)
     {
         return false;
     }
+
+    m_connMap.erase(clientId);
+
+    return true;
 }
 
 std::shared_ptr<Epoll_Socket_Connection> Epoll_ConnectionManager::GetConnection(uint64_t clientId)
@@ -102,9 +100,11 @@ int Epoll_ConnectionManager::GetAllConnectionIds(std::vector<uint64_t> &out_vIds
 @param [out] int& out_sockfd : 出错的client socket fd
 
 @return 0 : 成功
-@return -1 : 失败，此情况有可能是epoll handle失效，或者socketfd失效(此时需要关闭客户端连接)
+@return -1 : 失败，此情况有可能是epoll
+handle失效，或者socketfd失效(此时需要关闭客户端连接)
 */
-int Epoll_ConnectionManager::Send(uint64_t cid, std::shared_ptr<std::vector<uint8_t>> &in_data, int &out_errno, int &out_cid, int &out_sockfd)
+int Epoll_ConnectionManager::Send(uint64_t cid, std::shared_ptr<std::vector<uint8_t>> &in_data,
+                                  int &out_errno, int &out_cid, int &out_sockfd)
 {
     static const string ftag("Epoll_ConnectionManager::Send() ");
 

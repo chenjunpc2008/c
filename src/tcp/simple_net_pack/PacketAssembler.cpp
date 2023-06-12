@@ -3,8 +3,9 @@
 #include "NetPackage.h"
 #include <vector>
 #include <algorithm>
-
+#include <string.h>
 #include <time.h>
+#include <iostream>
 
 #ifdef _MSC_VER
 #include <winsock2.h>
@@ -12,9 +13,9 @@
 #include <arpa/inet.h>
 #endif
 
-#include "tool_string/sof_string.h"
-#include "tool_string/Tgw_StringUtil.h"
-#include "CRC32.h"
+#include "util/tool_string/sof_string.h"
+#include "util/tool_string/normal_stringUtil.h"
+#include "util/tool_string/CRC32.h"
 
 using namespace std;
 
@@ -26,73 +27,73 @@ PacketAssembler::~PacketAssembler(void)
 {
 }
 
-string &PacketAssembler::DebugOut(std::shared_ptr<simutgw::NET_PACKAGE_LOCAL> &ptrNetPack, string &out_content)
+string &PacketAssembler::DebugOut(std::shared_ptr<simplePack::NET_PACKAGE_LOCAL> &ptrNetPack, string &out_content)
 {
     string strTran;
-    string strDebug;
+    string sDebug;
 
-    strDebug = "NET_PACKAGE beginstring=[";
-    strDebug += ptrNetPack->head.beginstring;
-    strDebug += "], version=[";
-    strDebug += sof_string::itostr(ptrNetPack->head.iVersion, strTran);
-    strDebug += "], timeStamp=[";
-    strDebug += sof_string::itostr(ptrNetPack->head.iTimeStamp, strTran);
-    strDebug += "], type=[";
-    strDebug += sof_string::itostr(ptrNetPack->head.iType, strTran);
-    strDebug += "], datalen=[";
-    strDebug += sof_string::itostr(ptrNetPack->head.iDatalen, strTran);
-    strDebug += "], dataCksum=[";
-    strDebug += ptrNetPack->head.iDataCksum;
-    strDebug += "], headCksum=[";
-    strDebug += sof_string::itostr(ptrNetPack->head.iHeadCksum, strTran);
-    strDebug += "], data=[";
-    strDebug += ptrNetPack->data;
-    strDebug += "]";
+    sDebug = "NET_PACKAGE beginstring=[";
+    sDebug += ptrNetPack->head.beginstring;
+    sDebug += "], version=[";
+    sDebug += sof_string::itostr(ptrNetPack->head.iVersion, strTran);
+    sDebug += "], timeStamp=[";
+    sDebug += sof_string::itostr(ptrNetPack->head.iTimeStamp, strTran);
+    sDebug += "], type=[";
+    sDebug += sof_string::itostr(ptrNetPack->head.iType, strTran);
+    sDebug += "], datalen=[";
+    sDebug += sof_string::itostr(ptrNetPack->head.iDatalen, strTran);
+    sDebug += "], dataCksum=[";
+    sDebug += ptrNetPack->head.iDataCksum;
+    sDebug += "], headCksum=[";
+    sDebug += sof_string::itostr(ptrNetPack->head.iHeadCksum, strTran);
+    sDebug += "], data=[";
+    sDebug += ptrNetPack->data;
+    sDebug += "]";
 
-    out_content = strDebug;
+    out_content = sDebug;
 
     return out_content;
 }
 
-string &PacketAssembler::DebugOut(simutgw::NET_PACKAGE_HEAD &netPackHead, string &out_content)
+string &PacketAssembler::DebugOut(simplePack::NET_PACKAGE_HEAD &netPackHead, string &out_content)
 {
     string strTran;
-    string strDebug;
+    string sDebug;
 
-    strDebug = "NET_PACKAGE beginstring=[";
+    sDebug = "NET_PACKAGE beginstring=[";
     strTran.clear();
-    strTran.insert(0, netPackHead.beginstring, 0, simutgw::NETPACK_BEGINSTR_LEN);
-    strDebug += strTran;
+    strTran.insert(0, netPackHead.beginstring, 0, simplePack::NETPACK_BEGINSTR_LEN);
+    sDebug += strTran;
 
-    strDebug += "], version=[";
+    sDebug += "], version=[";
     strTran.clear();
-    strTran.insert(0, netPackHead.version, 0, simutgw::NETPACK_VERSION_LEN);
-    strDebug += strTran;
+    strTran.insert(0, netPackHead.version, 0, simplePack::NETPACK_VERSION_LEN);
+    sDebug += strTran;
 
-    strDebug += "], timeStamp=[";
+    sDebug += "], timeStamp=[";
     sof_string::itostr(uint64_t(ntohl(netPackHead.timestamp)), strTran);
-    strDebug += strTran;
+    sDebug += strTran;
 
-    strDebug += "], type=[";
+    sDebug += "], type=[";
     strTran.clear();
-    strTran.insert(0, netPackHead.type, 0, simutgw::NETPACK_TYPE_LEN);
-    strDebug += strTran;
+    strTran.insert(0, netPackHead.type, 0, simplePack::NETPACK_TYPE_LEN);
+    sDebug += strTran;
 
-    strDebug += "], datalen=[";
+    sDebug += "], datalen=[";
     sof_string::itostr(uint64_t(ntohl(netPackHead.datalen)), strTran);
-    strDebug += strTran;
+    sDebug += strTran;
 
-    strDebug += "], check=[";
+    sDebug += "], check=[";
     sof_string::itostr(uint64_t(ntohl(netPackHead.dataCksum)), strTran);
-    strDebug += strTran;
+    sDebug += strTran;
 
-    strDebug += "], headChecksum=[";
+    sDebug += "], headChecksum=[";
     sof_string::itostr(uint64_t(ntohl(netPackHead.headcksum)), strTran);
-    strDebug += strTran;
+    sDebug += strTran;
 
-    strDebug += "]";
+    sDebug += "]";
 
-    out_content = strDebug;
+    out_content = sDebug;
 
     return out_content;
 }
@@ -108,13 +109,13 @@ true -- 检查
 false -- 不检查
 */
 int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
-                                 std::vector<std::shared_ptr<simutgw::NET_PACKAGE_LOCAL>> &recvedDatas,
+                                 std::vector<std::shared_ptr<simplePack::NET_PACKAGE_LOCAL>> &recvedDatas,
                                  bool bTrimWasteData, bool bCheckTimestamp)
 {
     static const std::string ftag("PacketAssembler::RecvPackage() ");
 
     size_t uiBufferSize = vctBuffer.size();
-    if (uiBufferSize <= simutgw::NET_PACKAGE_HEADLEN)
+    if (uiBufferSize <= simplePack::NET_PACKAGE_HEADLEN)
     {
         // 剩余的数据端不够包头数据长度，还需继续缓存
         return 1;
@@ -132,7 +133,7 @@ int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
     // net package head pos
     std::vector<uint8_t>::iterator itHeadPos = vctBuffer.end();
 
-    simutgw::NET_PACKAGE_HEAD structNetPackHead;
+    simplePack::NET_PACKAGE_HEAD structNetPackHead;
     char *pStructNetPackHead = (char *)&structNetPackHead;
 
     // 拷贝字符串中间变量
@@ -150,12 +151,12 @@ int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
         bMatchBeginstr = false;
         uiNetCompare_BeginStringPos = 0;
         itHeadPos = vctBuffer.end();
-        memset(pStructNetPackHead, '\0', simutgw::NET_PACKAGE_HEADLEN);
+        memset(pStructNetPackHead, '\0', simplePack::NET_PACKAGE_HEADLEN);
 
         // 查找首字母
         std::vector<uint8_t>::iterator itBuf =
             find(vctBuffer.begin(), vctBuffer.end(),
-                 simutgw::NETPACK_BEGINSTRING[uiNetCompare_BeginStringPos]);
+                 simplePack::NETPACK_BEGINSTRING[uiNetCompare_BeginStringPos]);
 
         if (vctBuffer.end() == itBuf)
         {
@@ -179,7 +180,7 @@ int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
                 // 如果首字母都匹配不上，有可能是错序包，清空与下一个包头之间的内容
                 std::vector<uint8_t>::iterator itFind =
                     find(vctBuffer.begin() + 1, vctBuffer.end(),
-                         simutgw::NETPACK_BEGINSTRING[uiNetCompare_BeginStringPos]);
+                         simplePack::NETPACK_BEGINSTRING[uiNetCompare_BeginStringPos]);
 
                 if (itFind != vctBuffer.end())
                 {
@@ -208,7 +209,7 @@ int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
                     uiDatasLeft = uiBufferSize - uiCurrentPos;
 
                     // 查看从当前位置开始是否有足够的包头数据
-                    if (simutgw::NET_PACKAGE_HEADLEN > uiDatasLeft)
+                    if (simplePack::NET_PACKAGE_HEADLEN > uiDatasLeft)
                     {
                         // 剩余的数据端不够包头数据长度，还需继续缓存
                         return 1;
@@ -220,7 +221,7 @@ int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
                     // 继续对比是否是真的包头数据
                     do
                     {
-                        if (simutgw::NETPACK_BEGINSTRING[uiNetCompare_BeginStringPos] != *(itBuf))
+                        if (simplePack::NETPACK_BEGINSTRING[uiNetCompare_BeginStringPos] != *(itBuf))
                         {
                             bMatchBeginstr = false;
 
@@ -233,7 +234,7 @@ int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
 
                         ++uiNetCompare_BeginStringPos;
                         ++itBuf;
-                    } while (uiNetCompare_BeginStringPos < simutgw::NETPACK_BEGINSTR_LEN);
+                    } while (uiNetCompare_BeginStringPos < simplePack::NETPACK_BEGINSTR_LEN);
 
                     if (bMatchBeginstr)
                     {
@@ -243,15 +244,15 @@ int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
 
                         unsigned int iCopyedByte = 0;
                         for (iCopyedByte = 0;
-                             iCopyedByte < simutgw::NET_PACKAGE_HEADLEN && itBuf != vctBuffer.end();
+                             iCopyedByte < simplePack::NET_PACKAGE_HEADLEN && itBuf != vctBuffer.end();
                              ++itBuf, ++iCopyedByte)
                         {
                             cCopyTmp = *itBuf;
                             memcpy(pStructNetPackHead + iCopyedByte, &cCopyTmp, 1);
                         }
 
-                        std::shared_ptr<simutgw::NET_PACKAGE_LOCAL> ptrNetPack =
-                            std::shared_ptr<simutgw::NET_PACKAGE_LOCAL>(new simutgw::NET_PACKAGE_LOCAL());
+                        std::shared_ptr<simplePack::NET_PACKAGE_LOCAL> ptrNetPack =
+                            std::shared_ptr<simplePack::NET_PACKAGE_LOCAL>(new simplePack::NET_PACKAGE_LOCAL());
 
                         int iPackTranRes = NetPackageHeadToLocal(structNetPackHead, ptrNetPack, bCheckTimestamp);
                         if (0 != iPackTranRes)
@@ -355,8 +356,8 @@ int PacketAssembler::RecvPackage(std::vector<uint8_t> &vctBuffer,
 true -- 检查
 false -- 不检查
 */
-int PacketAssembler::NetPackageHeadToLocal(simutgw::NET_PACKAGE_HEAD &stNetPack,
-                                           std::shared_ptr<simutgw::NET_PACKAGE_LOCAL> &ptrNetPack, bool bCheckTimestamp)
+int PacketAssembler::NetPackageHeadToLocal(simplePack::NET_PACKAGE_HEAD &stNetPack,
+                                           std::shared_ptr<simplePack::NET_PACKAGE_LOCAL> &ptrNetPack, bool bCheckTimestamp)
 {
     static const string ftag("PacketAssembler::NetPackageHeadToLocal() ");
 
@@ -365,20 +366,20 @@ int PacketAssembler::NetPackageHeadToLocal(simutgw::NET_PACKAGE_HEAD &stNetPack,
     std::string strType;
 
     // beginstring
-    ptrNetPack->head.beginstring.insert(0, stNetPack.beginstring, 0, simutgw::NETPACK_BEGINSTR_LEN);
+    ptrNetPack->head.beginstring.insert(0, stNetPack.beginstring, 0, simplePack::NETPACK_BEGINSTR_LEN);
 
     // version
-    strVersion.insert(0, stNetPack.version, 0, simutgw::NETPACK_VERSION_LEN);
+    strVersion.insert(0, stNetPack.version, 0, simplePack::NETPACK_VERSION_LEN);
 
-    iRes = Tgw_StringUtil::String2Int_atoi(strVersion, ptrNetPack->head.iVersion);
+    iRes = n_stringUtil::String2Int_atoi(strVersion, ptrNetPack->head.iVersion);
     if (0 != iRes)
     {
-        string strDebug("Version trans to int failed, src=");
+        string sDebug("Version trans to int failed, src=");
         string strPackContent;
 
-        strDebug += DebugOut(stNetPack, strPackContent);
+        sDebug += DebugOut(stNetPack, strPackContent);
 
-        EzLog::e(ftag, strDebug);
+        cout << ftag << "error " << sDebug << endl;
         return -1;
     }
 
@@ -389,32 +390,32 @@ int PacketAssembler::NetPackageHeadToLocal(simutgw::NET_PACKAGE_HEAD &stNetPack,
     iRes = ValidateTimeStamp(ptrNetPack->head.iTimeStamp, bCheckTimestamp);
     if (0 != iRes)
     {
-        string strDebug("ValidateTimeStamp failed, src=");
+        string sDebug("ValidateTimeStamp failed, src=");
         string strPackContent;
 
-        strDebug += DebugOut(stNetPack, strPackContent);
+        sDebug += DebugOut(stNetPack, strPackContent);
 
-        EzLog::e(ftag, strDebug);
+        cout << ftag << "error " << sDebug << endl;
         return -1;
     }
 
     // type
-    strType.insert(0, stNetPack.type, 0, simutgw::NETPACK_TYPE_LEN);
+    strType.insert(0, stNetPack.type, 0, simplePack::NETPACK_TYPE_LEN);
 
-    iRes = Tgw_StringUtil::String2Int_atoi(strType, ptrNetPack->head.iType);
+    iRes = n_stringUtil::String2Int_atoi(strType, ptrNetPack->head.iType);
     if (0 != iRes)
     {
-        string strDebug("Type trans to int failed, src=");
+        string sDebug("Type trans to int failed, src=");
         string strPackContent;
 
-        strDebug += DebugOut(stNetPack, strPackContent);
+        sDebug += DebugOut(stNetPack, strPackContent);
 
-        EzLog::e(ftag, strDebug);
+        cout << ftag << "error " << sDebug << endl;
         return -1;
     }
 
     // 校验version,type
-    if (ptrNetPack->head.iVersion != simutgw::NETPACK_VERSION || ptrNetPack->head.iType < 0)
+    if (ptrNetPack->head.iVersion != simplePack::NETPACK_VERSION || ptrNetPack->head.iType < 0)
     {
         return -1;
     }
@@ -434,13 +435,13 @@ int PacketAssembler::NetPackageHeadToLocal(simutgw::NET_PACKAGE_HEAD &stNetPack,
     {
         string strTran;
         string strPackContent;
-        string strDebug("HeadCksum check failed, expected=");
-        strDebug += sof_string::itostr(iHeadCksum, strTran);
-        strDebug += ", src=";
+        string sDebug("HeadCksum check failed, expected=");
+        sDebug += sof_string::itostr(iHeadCksum, strTran);
+        sDebug += ", src=";
 
-        strDebug += DebugOut(stNetPack, strPackContent);
+        sDebug += DebugOut(stNetPack, strPackContent);
 
-        EzLog::e(ftag, strDebug);
+        cout << ftag << "error " << sDebug << endl;
         return -1;
     }
 
@@ -459,16 +460,16 @@ int PacketAssembler::LocalPackageToNetBuffer(const int in_iMsgType, const std::s
 
     //
     // beginstring
-    for (i = 0; i < simutgw::NETPACK_BEGINSTR_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_BEGINSTR_LEN; ++i)
     {
-        out_vctData.push_back(simutgw::NETPACK_BEGINSTRING[i]);
+        out_vctData.push_back(simplePack::NETPACK_BEGINSTRING[i]);
     }
 
     //
     // version
-    for (i = 0; i < (simutgw::NETPACK_VERSION_LEN); ++i)
+    for (i = 0; i < (simplePack::NETPACK_VERSION_LEN); ++i)
     {
-        out_vctData.push_back(simutgw::NETPACK_VERSION_STR[i]);
+        out_vctData.push_back(simplePack::NETPACK_VERSION_STR[i]);
     }
 
     // timestamp
@@ -486,7 +487,7 @@ int PacketAssembler::LocalPackageToNetBuffer(const int in_iMsgType, const std::s
     char szNetTimestamp[4] = {'\0', '\0', '\0', '\0'};
     memcpy(szNetTimestamp, &iNetTimestamp, 4);
 
-    for (i = 0; i < simutgw::NETPACK_TIMESTAMP_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_TIMESTAMP_LEN; ++i)
     {
         out_vctData.push_back(szNetTimestamp[i]);
     }
@@ -496,16 +497,16 @@ int PacketAssembler::LocalPackageToNetBuffer(const int in_iMsgType, const std::s
     sof_string::itostr(in_iMsgType, strType);
 
     iStringLen = strType.length();
-    if (simutgw::NETPACK_TYPE_LEN < iStringLen)
+    if (simplePack::NETPACK_TYPE_LEN < iStringLen)
     {
-        string strDebug("Type length check failed, src=");
-        strDebug += strType;
+        string sDebug("Type length check failed, src=");
+        sDebug += strType;
 
-        EzLog::e(ftag, strDebug);
+        cout << ftag << "error " << sDebug << endl;
         return -1;
     }
 
-    for (i = 0; i < (simutgw::NETPACK_TYPE_LEN - iStringLen); ++i)
+    for (i = 0; i < (simplePack::NETPACK_TYPE_LEN - iStringLen); ++i)
     {
         out_vctData.push_back('0');
     }
@@ -523,7 +524,7 @@ int PacketAssembler::LocalPackageToNetBuffer(const int in_iMsgType, const std::s
     char szNetDatalen[4] = {'\0', '\0', '\0', '\0'};
     memcpy(szNetDatalen, &iNetDatalen, 4);
 
-    for (i = 0; i < simutgw::NETPACK_DATALEN_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_DATALEN_LEN; ++i)
     {
         out_vctData.push_back(szNetDatalen[i]);
     }
@@ -534,12 +535,12 @@ int PacketAssembler::LocalPackageToNetBuffer(const int in_iMsgType, const std::s
     if (0 != iRes)
     {
         string strTran;
-        string strDebug("GenerateNetPackCRC failed, src=[");
-        strDebug += in_data;
-        strDebug += "],errcode=";
-        strDebug += sof_string::itostr(iRes, strTran);
+        string sDebug("GenerateNetPackCRC failed, src=[");
+        sDebug += in_data;
+        sDebug += "],errcode=";
+        sDebug += sof_string::itostr(iRes, strTran);
 
-        EzLog::e(ftag, strDebug);
+        cout << ftag << "error " << sDebug << endl;
         return -1;
     }
 
@@ -547,26 +548,26 @@ int PacketAssembler::LocalPackageToNetBuffer(const int in_iMsgType, const std::s
     char szNetDataCheckSum[4] = {'\0', '\0', '\0', '\0'};
     memcpy(szNetDataCheckSum, &iNetDataCheckSum, 4);
 
-    for (i = 0; i < simutgw::NETPACK_DATACKSUM_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_DATACKSUM_LEN; ++i)
     {
         out_vctData.push_back(szNetDataCheckSum[i]);
     }
 
     // head checksum
     // 当前包的偏移量位置，指明当组装多个包时当前包的地址
-    size_t iPos = out_vctData.size() - (simutgw::NET_PACKAGE_HEADLEN - simutgw::NETPACK_HEADCKSUM_LEN - simutgw::NETPACK_RESERVE_FIELD_LEN);
+    size_t iPos = out_vctData.size() - (simplePack::NET_PACKAGE_HEADLEN - simplePack::NETPACK_HEADCKSUM_LEN - simplePack::NETPACK_RESERVE_FIELD_LEN);
     uint32_t iHeadChecksum = GenerateChecksum(out_vctData, iPos);
     uint32_t iNetHeadChecksum = htonl(iHeadChecksum);
     char szNetHeadChecksum[4] = {'\0', '\0', '\0', '\0'};
     memcpy(szNetHeadChecksum, &iNetHeadChecksum, 4);
 
-    for (i = 0; i < simutgw::NETPACK_HEADCKSUM_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_HEADCKSUM_LEN; ++i)
     {
         out_vctData.push_back(szNetHeadChecksum[i]);
     }
 
     // reserve field
-    for (i = 0; i < simutgw::NETPACK_RESERVE_FIELD_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_RESERVE_FIELD_LEN; ++i)
     {
         out_vctData.push_back(' ');
     }
@@ -608,7 +609,7 @@ int PacketAssembler::GenerateNetPackCRC(const string &in_strNetPackData, uint32_
     return 0;
 }
 
-bool PacketAssembler::CheckNetPackCRC(const std::shared_ptr<simutgw::NET_PACKAGE_LOCAL> &ptrNetPack)
+bool PacketAssembler::CheckNetPackCRC(const std::shared_ptr<simplePack::NET_PACKAGE_LOCAL> &ptrNetPack)
 {
     // static const std::string ftag("PacketAssembler::CheckNetPackCRC() ");
 
@@ -627,8 +628,8 @@ bool PacketAssembler::CheckNetPackCRC(const std::shared_ptr<simutgw::NET_PACKAGE
     return false;
 }
 
-bool PacketAssembler::PackageCompare(std::shared_ptr<simutgw::NET_PACKAGE_LOCAL> &ptrNetPackDest,
-                                     std::shared_ptr<simutgw::NET_PACKAGE_LOCAL> &ptrNetPackSrc)
+bool PacketAssembler::PackageCompare(std::shared_ptr<simplePack::NET_PACKAGE_LOCAL> &ptrNetPackDest,
+                                     std::shared_ptr<simplePack::NET_PACKAGE_LOCAL> &ptrNetPackSrc)
 {
     static const std::string ftag("PacketAssembler::PackageCompare() ");
 
@@ -638,17 +639,17 @@ bool PacketAssembler::PackageCompare(std::shared_ptr<simutgw::NET_PACKAGE_LOCAL>
     }
     else
     {
-        string strDebug("net packages not equal, dest=");
+        string sDebug("net packages not equal, dest=");
         string strPackContent;
 
         DebugOut(ptrNetPackDest, strPackContent);
-        strDebug += strPackContent;
-        strDebug += "; src=";
+        sDebug += strPackContent;
+        sDebug += "; src=";
 
         DebugOut(ptrNetPackSrc, strPackContent);
-        strDebug += strPackContent;
+        sDebug += strPackContent;
 
-        EzLog::e(ftag, strDebug);
+        cout << ftag << "error " << sDebug << endl;
 
         return false;
     }
@@ -658,7 +659,7 @@ uint32_t PacketAssembler::GenerateChecksum(const std::vector<uint8_t> &vctData, 
 {
     unsigned long cksum = 0;
     size_t index = iBeginPos;
-    size_t endPos = iBeginPos + simutgw::NET_PACKAGE_HEADLEN - simutgw::NETPACK_HEADCKSUM_LEN - simutgw::NETPACK_RESERVE_FIELD_LEN;
+    size_t endPos = iBeginPos + simplePack::NET_PACKAGE_HEADLEN - simplePack::NETPACK_HEADCKSUM_LEN - simplePack::NETPACK_RESERVE_FIELD_LEN;
     while (index < vctData.size() && index < endPos)
     {
         // uint8_t tmp = static_cast<uint8_t>(vctData[index]);
@@ -677,11 +678,11 @@ uint32_t PacketAssembler::GenerateChecksum(const std::vector<uint8_t> &vctData, 
     return iCksum;
 }
 
-uint32_t PacketAssembler::GenerateHeadChecksum(const simutgw::NET_PACKAGE_HEAD &netPackHead)
+uint32_t PacketAssembler::GenerateHeadChecksum(const simplePack::NET_PACKAGE_HEAD &netPackHead)
 {
     unsigned long cksum = 0;
     size_t index = 0;
-    size_t endPos = simutgw::NET_PACKAGE_HEADLEN - simutgw::NETPACK_HEADCKSUM_LEN - simutgw::NETPACK_RESERVE_FIELD_LEN;
+    size_t endPos = simplePack::NET_PACKAGE_HEADLEN - simplePack::NETPACK_HEADCKSUM_LEN - simplePack::NETPACK_RESERVE_FIELD_LEN;
     const char *phead = (const char *)&netPackHead;
     while (index < endPos)
     {
@@ -701,7 +702,7 @@ uint32_t PacketAssembler::GenerateHeadChecksum(const simutgw::NET_PACKAGE_HEAD &
     return iCksum;
 }
 
-uint32_t PacketAssembler::GenerateHeadChecksum(const std::shared_ptr<simutgw::NET_PACKAGE_LOCAL> &prtNetPack)
+uint32_t PacketAssembler::GenerateHeadChecksum(const std::shared_ptr<simplePack::NET_PACKAGE_LOCAL> &prtNetPack)
 {
     unsigned int i = 0;
     size_t iStringLen = 0;
@@ -710,16 +711,16 @@ uint32_t PacketAssembler::GenerateHeadChecksum(const std::shared_ptr<simutgw::NE
     std::vector<uint8_t> vctData;
     //
     // beginstring
-    for (i = 0; i < simutgw::NETPACK_BEGINSTR_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_BEGINSTR_LEN; ++i)
     {
-        vctData.push_back(simutgw::NETPACK_BEGINSTRING[i]);
+        vctData.push_back(simplePack::NETPACK_BEGINSTRING[i]);
     }
 
     //
     // version
-    for (i = 0; i < (simutgw::NETPACK_VERSION_LEN); ++i)
+    for (i = 0; i < (simplePack::NETPACK_VERSION_LEN); ++i)
     {
-        vctData.push_back(simutgw::NETPACK_VERSION_STR[i]);
+        vctData.push_back(simplePack::NETPACK_VERSION_STR[i]);
     }
 
     // timestamp
@@ -728,7 +729,7 @@ uint32_t PacketAssembler::GenerateHeadChecksum(const std::shared_ptr<simutgw::NE
     char szNetTimestamp[4] = {'\0', '\0', '\0', '\0'};
     memcpy(szNetTimestamp, &iNetTimestamp, 4);
 
-    for (i = 0; i < simutgw::NETPACK_TIMESTAMP_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_TIMESTAMP_LEN; ++i)
     {
         vctData.push_back(szNetTimestamp[i]);
     }
@@ -738,12 +739,12 @@ uint32_t PacketAssembler::GenerateHeadChecksum(const std::shared_ptr<simutgw::NE
     sof_string::itostr(prtNetPack->head.iType, strType);
 
     iStringLen = strType.length();
-    if (simutgw::NETPACK_TYPE_LEN < iStringLen)
+    if (simplePack::NETPACK_TYPE_LEN < iStringLen)
     {
         return -1;
     }
 
-    for (i = 0; i < (simutgw::NETPACK_TYPE_LEN - iStringLen); ++i)
+    for (i = 0; i < (simplePack::NETPACK_TYPE_LEN - iStringLen); ++i)
     {
         vctData.push_back('0');
     }
@@ -760,7 +761,7 @@ uint32_t PacketAssembler::GenerateHeadChecksum(const std::shared_ptr<simutgw::NE
     char szNetDatalen[4] = {'\0', '\0', '\0', '\0'};
     memcpy(szNetDatalen, &iNetDatalen, 4);
 
-    for (i = 0; i < simutgw::NETPACK_DATALEN_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_DATALEN_LEN; ++i)
     {
         vctData.push_back(szNetDatalen[i]);
     }
@@ -771,7 +772,7 @@ uint32_t PacketAssembler::GenerateHeadChecksum(const std::shared_ptr<simutgw::NE
     char szNetDataCheckSum[4] = {'\0', '\0', '\0', '\0'};
     memcpy(szNetDataCheckSum, &iNetDataCheckSum, 4);
 
-    for (i = 0; i < simutgw::NETPACK_DATACKSUM_LEN; ++i)
+    for (i = 0; i < simplePack::NETPACK_DATACKSUM_LEN; ++i)
     {
         vctData.push_back(szNetDataCheckSum[i]);
     }
@@ -857,7 +858,7 @@ return -1;
 }
 
 uint64_t ui64Stamp = 0;
-int iRes = Tgw_StringUtil::String2UInt64_strtoui64( strStamp, ui64Stamp );
+int iRes = n_stringUtil::String2UInt64_strtoui64( strStamp, ui64Stamp );
 if ( 0 > iRes )
 {
 return -1;

@@ -14,14 +14,14 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-#include "thread_pool_base/ThreadBase.h"
+#include "threadpool/thread_pool_base/ThreadBase.h"
 
 #include "tcp/linux_socket_base/LinuxNetUtil.h"
 
 #include "tcp/socket_conn_manage_base/EventBaseHandler.h"
 #include "tcp/socket_conn_manage_base/ConnectionInformation.h"
 
-#include "tcp/linux_epoll_server/Epoll_ConnectionManager.h"
+#include "tcp/socket_conn_manage_base/Epoll_ConnectionManager.h"
 #include "EpollClient_EventHandler.h"
 
 /*
@@ -74,7 +74,7 @@ public:
 
     int Init(void);
 
-    int Connect(const string &in_serverip, const unsigned int in_port);
+    int Connect(const std::string &in_serverip, const unsigned int in_port);
 
     void Disconnect(void);
 

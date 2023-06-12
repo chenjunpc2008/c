@@ -18,9 +18,10 @@ class Epoll_ConnectionManager
     //
     // Members
     //
-protected:
+  protected:
     typedef std::map<uint64_t, std::shared_ptr<Epoll_Socket_Connection>> EpollConnMap_t;
 
+    // key-fd
     EpollConnMap_t m_connMap;
 
     std::mutex m_mutex;
@@ -28,7 +29,7 @@ protected:
     //
     // Functions
     //
-public:
+  public:
     Epoll_ConnectionManager(void);
     virtual ~Epoll_ConnectionManager(void);
 
@@ -52,9 +53,11 @@ public:
     @param [out] int& out_sockfd : 出错的client socket fd
 
     @return 0 : 成功
-    @return -1 : 失败，此情况有可能是epoll handle失效，或者socketfd失效(此时需要关闭客户端连接)
+    @return -1 : 失败，此情况有可能是epoll
+    handle失效，或者socketfd失效(此时需要关闭客户端连接)
     */
-    int Send(uint64_t cid, std::shared_ptr<std::vector<uint8_t>> &in_data, int &out_errno, int &out_cid, int &out_sockfd);
+    int Send(uint64_t cid, std::shared_ptr<std::vector<uint8_t>> &in_data, int &out_errno,
+             int &out_cid, int &out_sockfd);
 };
 
 #endif

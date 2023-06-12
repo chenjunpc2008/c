@@ -1,7 +1,5 @@
 ﻿#include "ConnectionManager.h"
 
-#include "util/EzLog.h"
-
 using namespace std;
 
 ConnectionManager::ConnectionManager(void)

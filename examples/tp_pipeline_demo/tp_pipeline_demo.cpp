@@ -25,9 +25,9 @@ public:
 
         {
             string strTran;
-            string strDebug("task id=");
-            strDebug += sof_string::itostr(m_uiTaskId, strTran);
-            std::cout << ftag << strDebug << std::endl;
+            string sDebug("task id=");
+            sDebug += sof_string::itostr(m_uiTaskId, strTran);
+            std::cout << ftag << sDebug << std::endl;
         }
 
         // Sleep(2000);

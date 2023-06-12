@@ -8,10 +8,10 @@
 
 #include "tcp/linux_socket_base/LinuxNetUtil.h"
 
-Epoll_Socket_Connection::Epoll_Socket_Connection(const int socketfd,
-                                                 const uint64_t cid, const struct ConnectionInformation &cinfo, const int epollfd)
-    : m_socketfd(socketfd), m_id(cid), m_cinfo(cinfo), m_epollfd(epollfd),
-      m_bIsEpoutSet(false),
+Epoll_Socket_Connection::Epoll_Socket_Connection(const int socketfd, const uint64_t cid,
+                                                 const struct ConnectionInformation &cinfo,
+                                                 const int epollfd)
+    : m_socketfd(socketfd), m_id(cid), m_cinfo(cinfo), m_epollfd(epollfd), m_bIsEpoutSet(false),
       m_ui64NextSendSeq(0)
 {
 }
@@ -40,7 +40,8 @@ Epoll_Socket_Connection::~Epoll_Socket_Connection()
 @return 0 : 成功
 @return -1 : 失败，此情况有可能是epoll handle失效，或者socketfd失效(此时需要关闭客户端连接)
 */
-int Epoll_Socket_Connection::AddSend(std::shared_ptr<std::vector<uint8_t>> &in_pSendData, int &out_errno, int &out_cid, int &out_sockfd)
+int Epoll_Socket_Connection::AddSend(std::shared_ptr<std::vector<uint8_t>> &in_pSendData,
+                                     int &out_errno, int &out_cid, int &out_sockfd)
 {
     std::lock_guard<std::mutex> lock(m_mutex_sendQue);
 
@@ -66,7 +67,8 @@ int Epoll_Socket_Connection::AddSend(std::shared_ptr<std::vector<uint8_t>> &in_p
     return 0;
 }
 
-int Epoll_Socket_Connection::LoopSend(uint64_t &out_byteTransferred, int &out_errno, int &out_cid, int &out_sockfd)
+int Epoll_Socket_Connection::LoopSend(uint64_t &out_byteTransferred, int &out_errno, int &out_cid,
+                                      int &out_sockfd)
 {
     std::lock_guard<std::mutex> lock(m_mutex_sendQue);
 
@@ -75,6 +77,8 @@ int Epoll_Socket_Connection::LoopSend(uint64_t &out_byteTransferred, int &out_er
     std::shared_ptr<std::vector<uint8_t>> pSendData;
     int iRes = 0;
     int iErr = 0;
+    out_cid = m_id;
+    out_sockfd = m_socketfd;
 
     // 循环发送直至清空缓冲区
     do
@@ -99,8 +103,7 @@ int Epoll_Socket_Connection::LoopSend(uint64_t &out_byteTransferred, int &out_er
             else
             {
                 out_errno = iErr;
-                out_cid = m_id;
-                out_sockfd = m_socketfd;
+
                 return -1;
             }
         }
@@ -112,8 +115,7 @@ int Epoll_Socket_Connection::LoopSend(uint64_t &out_byteTransferred, int &out_er
             if (0 != iRes)
             {
                 out_errno = iErr;
-                out_cid = m_id;
-                out_sockfd = m_socketfd;
+
                 return -1;
             }
 

@@ -55,11 +55,11 @@ int ClientSocket::Init(void)
             if (nullptr != m_pIocpHandler)
             {
                 string strTran;
-                string strDebug = ftag;
-                strDebug += "IOCPUtil::InitializeIocp failed err=";
-                strDebug += sof_string::itostr(iErr, strTran);
+                string sDebug = ftag;
+                sDebug += "IOCPUtil::InitializeIocp failed err=";
+                sDebug += sof_string::itostr(iErr, strTran);
 
-                m_pIocpHandler->OnErrorStr(strDebug);
+                m_pIocpHandler->OnErrorStr(sDebug);
             }
 
             CleanUp();
@@ -83,11 +83,11 @@ int ClientSocket::Init(void)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "exception ";
-            strDebug += e.what();
+            string sDebug = ftag;
+            sDebug += "exception ";
+            sDebug += e.what();
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         CleanUp();
@@ -98,11 +98,11 @@ int ClientSocket::Init(void)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "unkown exception with error: ";
-            strDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
+            string sDebug = ftag;
+            sDebug += "unkown exception with error: ";
+            sDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         CleanUp();
@@ -137,11 +137,11 @@ int ClientSocket::InitializeThreadPool(DWORD numThread)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "new IOCP_ThreadPool() with error: ";
-            strDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
+            string sDebug = ftag;
+            sDebug += "new IOCP_ThreadPool() with error: ";
+            sDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         return -1;
@@ -150,14 +150,16 @@ int ClientSocket::InitializeThreadPool(DWORD numThread)
     int iRes = m_pIocpThreadPool->InitPool();
     if (0 != iRes)
     {
-        EzLog::e(ftag, "failed");
+        cout << ftag << "error "
+             << "IocpThreadPool.InitPool failed" << endl;
         return -1;
     }
 
     iRes = m_pIocpThreadPool->StartPool();
     if (0 != iRes)
     {
-        EzLog::e(ftag, "failed");
+        cout << ftag << "error "
+             << "IocpThreadPool.StartPool failed" << endl;
         return -1;
     }
 
@@ -253,11 +255,11 @@ int ClientSocket::CleanUp(void)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "exception";
-            strDebug += e.what();
+            string sDebug = ftag;
+            sDebug += "exception";
+            sDebug += e.what();
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
         return -1;
     }
@@ -266,11 +268,11 @@ int ClientSocket::CleanUp(void)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "unkown exception with error: ";
-            strDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
+            string sDebug = ftag;
+            sDebug += "unkown exception with error: ";
+            sDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         return -1;
@@ -355,11 +357,11 @@ int ClientSocket::Connect(const string &in_ip, const u_short in_port)
             if (nullptr != m_pIocpHandler)
             {
                 string strTran;
-                string strDebug = ftag;
-                strDebug += "IOCPUtil::RegisterIocpHandle failed err=";
-                strDebug += sof_string::itostr(iErr, strTran);
+                string sDebug = ftag;
+                sDebug += "IOCPUtil::RegisterIocpHandle failed err=";
+                sDebug += sof_string::itostr(iErr, strTran);
 
-                m_pIocpHandler->OnErrorStr(strDebug);
+                m_pIocpHandler->OnErrorStr(sDebug);
             }
 
             CleanUp();
@@ -391,11 +393,11 @@ int ClientSocket::Connect(const string &in_ip, const u_short in_port)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "exception ";
-            strDebug += e.what();
+            string sDebug = ftag;
+            sDebug += "exception ";
+            sDebug += e.what();
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         CleanUp();
@@ -406,11 +408,11 @@ int ClientSocket::Connect(const string &in_ip, const u_short in_port)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "unkown exception with error: ";
-            strDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
+            string sDebug = ftag;
+            sDebug += "unkown exception with error: ";
+            sDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         CleanUp();
@@ -436,11 +438,11 @@ void ClientSocket::Shutdown(uint64_t cid, int how)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "Connection does not exist cid=";
-            strDebug += sof_string::itostr(cid, strTran);
+            string sDebug = ftag;
+            sDebug += "Connection does not exist cid=";
+            sDebug += sof_string::itostr(cid, strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         return;
@@ -468,11 +470,11 @@ void ClientSocket::Disconnect(void)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "Connection does not exist cid=";
-            strDebug += sof_string::itostr(m_ui64MyCid, strTran);
+            string sDebug = ftag;
+            sDebug += "Connection does not exist cid=";
+            sDebug += sof_string::itostr(m_ui64MyCid, strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         return;
@@ -520,11 +522,11 @@ void ClientSocket::Send(std::shared_ptr<std::vector<uint8_t>> &pdata)
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "Connection does not exist cid=";
-            strDebug += sof_string::itostr(m_ui64MyCid, strTran);
+            string sDebug = ftag;
+            sDebug += "Connection does not exist cid=";
+            sDebug += sof_string::itostr(m_ui64MyCid, strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
         return;
     }
@@ -555,10 +557,10 @@ void ClientSocket::Send(std::shared_ptr<std::vector<uint8_t>> &pdata)
                 if (nullptr != m_pIocpHandler)
                 {
                     string strTran;
-                    string strDebug = ftag;
-                    strDebug += "Reconnection to server failed";
+                    string sDebug = ftag;
+                    sDebug += "Reconnection to server failed";
 
-                    m_pIocpHandler->OnErrorStr(strDebug);
+                    m_pIocpHandler->OnErrorStr(sDebug);
                 }
             }
         }
@@ -567,13 +569,13 @@ void ClientSocket::Send(std::shared_ptr<std::vector<uint8_t>> &pdata)
             if (nullptr != m_pIocpHandler)
             {
                 string strTran;
-                string strDebug = ftag;
-                strDebug += "send to cid=";
-                strDebug += sof_string::itostr(m_ui64MyCid, strTran);
-                strDebug += " failed with error: ";
-                strDebug += sof_string::itostr(lastError, strTran);
+                string sDebug = ftag;
+                sDebug += "send to cid=";
+                sDebug += sof_string::itostr(m_ui64MyCid, strTran);
+                sDebug += " failed with error: ";
+                sDebug += sof_string::itostr(lastError, strTran);
 
-                m_pIocpHandler->OnErrorStr(strDebug);
+                m_pIocpHandler->OnErrorStr(sDebug);
             }
         }
     }
@@ -599,11 +601,11 @@ int ClientSocket::SetKeepAlive()
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "set setsockopt failed with error:";
-            strDebug += sof_string::itostr(WSAGetLastError(), strTran);
+            string sDebug = ftag;
+            sDebug += "set setsockopt failed with error:";
+            sDebug += sof_string::itostr(WSAGetLastError(), strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         return -1;
@@ -626,11 +628,11 @@ int ClientSocket::SetKeepAlive()
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "set keepalive parameter failed with error:";
-            strDebug += sof_string::itostr(WSAGetLastError(), strTran);
+            string sDebug = ftag;
+            sDebug += "set keepalive parameter failed with error:";
+            sDebug += sof_string::itostr(WSAGetLastError(), strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         return -1;
@@ -697,11 +699,11 @@ int ClientSocket::ReConnect()
             if (nullptr != m_pIocpHandler)
             {
                 string strTran;
-                string strDebug = ftag;
-                strDebug += "IOCPUtil::RegisterIocpHandle failed err=";
-                strDebug += sof_string::itostr(iErr, strTran);
+                string sDebug = ftag;
+                sDebug += "IOCPUtil::RegisterIocpHandle failed err=";
+                sDebug += sof_string::itostr(iErr, strTran);
 
-                m_pIocpHandler->OnErrorStr(strDebug);
+                m_pIocpHandler->OnErrorStr(sDebug);
             }
 
             CleanUp();
@@ -733,11 +735,11 @@ int ClientSocket::ReConnect()
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "exception ";
-            strDebug += e.what();
+            string sDebug = ftag;
+            sDebug += "exception ";
+            sDebug += e.what();
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         CleanUp();
@@ -748,11 +750,11 @@ int ClientSocket::ReConnect()
         if (nullptr != m_pIocpHandler)
         {
             string strTran;
-            string strDebug = ftag;
-            strDebug += "unkown exception with error: ";
-            strDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
+            string sDebug = ftag;
+            sDebug += "unkown exception with error: ";
+            sDebug += sof_string::itostr((uint64_t)GetLastError(), strTran);
 
-            m_pIocpHandler->OnErrorStr(strDebug);
+            m_pIocpHandler->OnErrorStr(sDebug);
         }
 
         CleanUp();

@@ -15,6 +15,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <vector>
+#include <string>
 
 namespace LinuxNetUtil
 {
@@ -46,7 +48,7 @@ namespace LinuxNetUtil
     @return 0 : success
     @return -1 : failed, check error reason from out_errno
     */
-    int CreateConnectSocket(const string &in_serverIp, const unsigned int in_port, int &out_errno);
+    int CreateConnectSocket(const std::string &in_serverIp, const unsigned int in_port, int &out_errno);
 
     /*
     Accept client Connection
@@ -57,7 +59,7 @@ namespace LinuxNetUtil
     @param [out] uint16_t& out_remotePort : remote Port number
     @param [out] int& out_errno : 出错时的错误码
     */
-    int AcceptConn(const int in_listenfd, int &out_clientfd, string &out_remoteAddr, uint16_t &out_remotePort);
+    int AcceptConn(const int in_listenfd, int &out_clientfd, std::string &out_remoteAddr, uint16_t &out_remotePort, int &out_errno);
 
     /*
     读取数据

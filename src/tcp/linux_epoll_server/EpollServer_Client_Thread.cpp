@@ -4,7 +4,7 @@
 // linux only
 #else
 
-#include "linux_socket_base/LinuxNetUtil.h"
+#include "tcp/linux_socket_base/LinuxNetUtil.h"
 
 #include "EpollServer_Core.h"
 
@@ -16,7 +16,8 @@ const int EpollServer_Client_Thread::MAX_EPOLL_EVENTS = 500;
 // max epoll client events
 const int EpollServer_Client_Thread::MAX_CLIENT_EVENTS = 100;
 
-EpollServer_Client_Thread::EpollServer_Client_Thread(const uint64_t uiId, std::shared_ptr<EpollServer_EventHandler> pEventHandler)
+EpollServer_Client_Thread::EpollServer_Client_Thread(
+    const uint64_t uiId, std::shared_ptr<EpollServer_EventHandler> pEventHandler)
     : ThreadBase(uiId), m_epollfd(-1), m_aullClientNums(0), m_pEventHandler(pEventHandler)
 {
 }
@@ -35,7 +36,13 @@ Return :
 */
 int EpollServer_Client_Thread::StartThread()
 {
-    // static const std::string ftag("EpollServer_Client_Thread::StartThread() ");
+    static const std::string ftag("EpollServer_Client_Thread::StartThread() ");
+
+    if (nullptr == m_pEventHandler)
+    {
+        cout << ftag << "nullptr event handler" << endl;
+        return -1;
+    }
 
     int iRes = ThreadBase::StartThread(&EpollServer_Client_Thread::Run);
 
@@ -48,7 +55,15 @@ void *EpollServer_Client_Thread::Run(void *pParam)
 
     EpollServer_Client_Thread *pThread = static_cast<EpollServer_Client_Thread *>(pParam);
 
+    string sDebug = "";
+    int sockfd = 0;
     int iRes = 0;
+    string strTran;
+
+    uint64_t uiByteTransferred = 0;
+    int iErr = 0;
+    int iCid = 0;
+    int errorSockfd = 0;
 
     // 事件数组
     struct epoll_event eventList[MAX_CLIENT_EVENTS];
@@ -57,39 +72,38 @@ void *EpollServer_Client_Thread::Run(void *pParam)
     int epollfd = epoll_create(MAX_EPOLL_EVENTS);
     if (-1 == epollfd)
     {
-        int iErr = errno;
+        iErr = errno;
 
-        if (nullptr != pThread->m_pEventHandler)
-        {
-            string strDebug = ftag;
-            strDebug += "EPOLL_CTL_MOD error";
+        sDebug = ftag;
+        sDebug += "EPOLL_CTL_MOD error";
 
-            pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
-        }
+        pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
     }
 
     pThread->m_epollfd = epollfd;
+
+    pThread->m_pEventHandler->OnEvent("server started epoll");
 
     // epoll
     while ((ThreadPool_Conf::Running == pThread->m_emThreadRunOp) ||
            (ThreadPool_Conf::TillTaskFinish == pThread->m_emThreadRunOp))
     {
         // epoll_wait
-        int ret = epoll_wait(epollfd, eventList, EpollServer_Client_Thread::MAX_CLIENT_EVENTS, ThreadPool_Conf::g_dwWaitMS_Event);
+        int ret = epoll_wait(epollfd, eventList, EpollServer_Client_Thread::MAX_CLIENT_EVENTS,
+                             ThreadPool_Conf::g_dwWaitMS_Event);
         if (0 > ret)
         {
-            int iErr = errno;
+            iErr = errno;
             if (EINTR == iErr)
             {
                 continue;
             }
 
-            if (nullptr != pThread->m_pEventHandler)
             {
-                string strDebug = ftag;
-                strDebug += "epoll_wait error";
+                sDebug = ftag;
+                sDebug += "epoll_wait error";
 
-                pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
+                pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
             }
 
             break;
@@ -110,41 +124,39 @@ void *EpollServer_Client_Thread::Run(void *pParam)
                 if (EPOLLIN & eventList[i].events)
                 {
                     // cout << ftag << "EPOLLIN" << endl;
-                    int sockfd = eventList[i].data.fd;
+                    sockfd = eventList[i].data.fd;
                     if (0 > sockfd)
                     {
                         continue;
                     }
 
                     std::vector<uint8_t> rcvData;
-                    int iErr = 0;
+                    iErr = 0;
                     iRes = LinuxNetUtil::RecvData(sockfd, rcvData, iErr);
                     if (0 == iRes)
                     {
-                        if (nullptr != pThread->m_pEventHandler)
-                        {
-                            // Invoke the callback for the client
-                            pThread->m_pEventHandler->OnReceiveData(sockfd, rcvData);
-                        }
+                        // Invoke the callback for the client
+                        pThread->m_pEventHandler->OnReceiveData(sockfd, rcvData);
                     }
                     else
                     {
-
-                        if (nullptr != pThread->m_pEventHandler)
+                        EpollServer_Core *pServerCore = pThread->m_pEventHandler->GetServiceOwner();
+                        if (nullptr != pServerCore)
                         {
-                            EpollServer_Core *pServerCore = pThread->m_pEventHandler->GetServiceOwner();
-                            if (nullptr != pServerCore)
-                            {
-                                // 从 connection 删除
-                                pServerCore->m_connectionManager.RemoveConnection(sockfd);
-                            }
-
-                            // Invoke the callback for the client
-                            pThread->m_pEventHandler->OnClientDisconnect(sockfd, iErr);
+                            // 从 connection 删除
+                            pServerCore->m_connectionManager.RemoveConnection(sockfd);
                         }
+
+                        // Invoke the callback for the client
+                        pThread->m_pEventHandler->OnClientDisconnect(sockfd, iErr);
+
+                        // close
+                        close(sockfd);
 
                         // 减少client连接计数
                         pThread->m_aullClientNums -= 1;
+
+                        continue;
                     }
                 }
 
@@ -152,103 +164,86 @@ void *EpollServer_Client_Thread::Run(void *pParam)
                 {
                     // cout << ftag << "EPOLLOUT" << endl;
                     //  如果有数据发送
-                    int sockfd = eventList[i].data.fd;
+                    sockfd = eventList[i].data.fd;
 
-                    if (nullptr != pThread->m_pEventHandler)
+                    // Invoke the callback for the client
+                    std::shared_ptr<Epoll_Socket_Connection> pClientConn =
+                        pThread->m_pEventHandler->GetServiceOwner()
+                            ->m_connectionManager.GetConnection(sockfd);
+                    if (nullptr == pClientConn)
                     {
-                        // Invoke the callback for the client
-                        std::shared_ptr<Epoll_Socket_Connection> pClientConn = pThread->m_pEventHandler->GetServiceOwner()->m_connectionManager.GetConnection(sockfd);
-                        if (nullptr == pClientConn)
+                        string sDebug = ftag;
+                        sDebug += "connection manage couldn't find sfd=";
+                        sDebug += sof_string::itostr(sockfd, strTran);
+
+                        pThread->m_pEventHandler->OnErrorStr(sDebug);
+
+                        // wild fd, need to be close.
+                        shutdown(sockfd, SHUT_RDWR);
+                        close(sockfd);
+
+                        continue;
+                    }
+
+                    uiByteTransferred = 0;
+                    iErr = 0;
+                    iCid = 0;
+                    errorSockfd = 0;
+                    iRes = pClientConn->LoopSend(uiByteTransferred, iErr, iCid, errorSockfd);
+                    if (0 > iRes)
+                    {
+                        EpollServer_Core *pServerCore = pThread->m_pEventHandler->GetServiceOwner();
+                        if (nullptr != pServerCore)
                         {
-                            if (nullptr != pThread->m_pEventHandler)
-                            {
-                                string strDebug = ftag;
-                                strDebug += "connection manage couldn't find id=";
-                                strDebug += sof_string::itostr(sockfd, strTran);
-
-                                pThread->m_pEventHandler->OnErrorStr(strDebug);
-                            }
-
-                            continue;
+                            // 从 connection 删除
+                            pServerCore->m_connectionManager.RemoveConnection(iCid);
                         }
 
-                        uint64_t uiByteTransferred = 0;
-                        int iErr = 0;
-                        int iCid = 0;
-                        int errorSockfd = 0;
-                        int iRes = pClientConn->LoopSend(uiByteTransferred, iErr, iCid, errorSockfd);
-                        if (0 > iRes)
-                        {
-                            EpollServer_Core *pServerCore = pThread->m_pEventHandler->GetServiceOwner();
-                            if (nullptr != pServerCore)
-                            {
-                                // 从 connection 删除
-                                pServerCore->m_connectionManager.RemoveConnection(iCid);
-                            }
+                        // close
+                        close(sockfd);
 
-                            pThread->m_pEventHandler->OnDisconnect(sockfd, iErr);
-                            // 减少client连接计数
-                            pThread->m_aullClientNums -= 1;
-                        }
-                        else
-                        {
-                            pThread->m_pEventHandler->OnSentData(sockfd, uiByteTransferred);
-                        }
+                        pThread->m_pEventHandler->OnDisconnect(iCid, iErr);
+                        // 减少client连接计数
+                        pThread->m_aullClientNums -= 1;
                     }
                     else
                     {
-                        if (nullptr != pThread->m_pEventHandler)
-                        {
-                            string strDebug = ftag;
-                            strDebug += "no handler for in EPOLLOUT id=";
-                            strDebug += sof_string::itostr(sockfd, strTran);
-
-                            pThread->m_pEventHandler->OnErrorStr(strDebug);
-                        }
+                        pThread->m_pEventHandler->OnSentData(iCid, uiByteTransferred);
                     }
                 }
             }
             else
             {
-                int sockfd = eventList[i].data.fd;
+                sockfd = eventList[i].data.fd;
 
-                int iErr = errno;
+                iErr = errno;
                 if (eventList[i].events & EPOLLERR)
                 {
-                    if (nullptr != pThread->m_pEventHandler)
-                    {
-                        string strDebug = ftag;
-                        strDebug += "event=EPOLLERR fd=";
-                        strDebug += sof_string::itostr(sockfd, strTran);
+                    sDebug = ftag;
+                    sDebug += "event=EPOLLERR sfd=";
+                    sDebug += sof_string::itostr(sockfd, strTran);
 
-                        pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
-                    }
+                    pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
                 }
                 else if (eventList[i].events & EPOLLHUP)
                 {
-                    if (nullptr != pThread->m_pEventHandler)
-                    {
-                        string strDebug = ftag;
-                        strDebug += "event=EPOLLHUP fd=";
-                        strDebug += sof_string::itostr(sockfd, strTran);
+                    sDebug = ftag;
+                    sDebug += "event=EPOLLHUP sfd=";
+                    sDebug += sof_string::itostr(sockfd, strTran);
 
-                        pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
-                    }
+                    pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
                 }
                 else
                 {
                     uint32_t uiEvents = eventList[i].events;
 
-                    if (nullptr != pThread->m_pEventHandler)
-                    {
-                        string strDebug = ftag;
-                        strDebug += "event=";
-                        strDebug += sof_string::itostr(uiEvents, strTran);
-                        strDebug += " fd=";
-                        strDebug += sof_string::itostr(sockfd, strTran);
+                    sDebug = ftag;
+                    sDebug += "event=";
+                    sDebug += sof_string::itostr(uiEvents, strTran);
+                    sDebug += " sfd=";
+                    sDebug += sof_string::itostr(sockfd, strTran);
 
-                        pThread->m_pEventHandler->OnErrorCode(strDebug, iErr);
-                    }
+                    pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
                 }
 
                 if (nullptr != pThread->m_pEventHandler)
@@ -260,9 +255,11 @@ void *EpollServer_Client_Thread::Run(void *pParam)
                         pServerCore->m_connectionManager.RemoveConnection(sockfd);
                     }
 
-                    pThread->m_pEventHandler->OnServerError(iErr);
                     pThread->m_pEventHandler->OnClientDisconnect(sockfd, iErr);
                 }
+
+                // close
+                close(sockfd);
 
                 // 减少client连接计数
                 pThread->m_aullClientNums -= 1;
@@ -276,13 +273,10 @@ void *EpollServer_Client_Thread::Run(void *pParam)
     pThread->m_epollfd = -1;
 
     /*
-    if (!EzLog::LogLvlFilter(trace))
-    {
     string strTran;
-    string strDebug("thread finished id=");
-    strDebug += sof_string::itostr((uint64_t)pThread->m_dThreadId, strTran);
-    EzLog::Out(ftag, trace, strDebug );
-    }
+    string sDebug("thread finished id=");
+    sDebug += sof_string::itostr((uint64_t)pThread->m_dThreadId, strTran);
+    cout << ftag << "trace " << sDebug << endl;
     */
 
     pThread->m_emThreadState = ThreadPool_Conf::STOPPED;
@@ -295,17 +289,16 @@ int EpollServer_Client_Thread::AddNewClient(const int in_sockfd, int &out_epollf
 {
     static const std::string ftag("EpollServer_Client_Thread::AddNewClient() ");
 
-    if (0 > m_epollfd ||
-        ThreadPool_Conf::ThreadRunningOption::Running != m_emThreadState)
-    {
-        if (nullptr != m_pEventHandler)
-        {
-            string strDebug = ftag;
-            strDebug += "client thread is stop, not accept incoming, fd=";
-            strDebug += sof_string::itostr(in_sockfd, strTran);
+    string strTran;
+    string sDebug;
 
-            m_pEventHandler->OnErrorStr(strDebug);
-        }
+    if (0 > m_epollfd || ThreadPool_Conf::ThreadRunningOption::Running != m_emThreadState)
+    {
+        sDebug = ftag;
+        sDebug += "client thread is stop, not accept incoming, fd=";
+        sDebug += sof_string::itostr(in_sockfd, strTran);
+
+        m_pEventHandler->OnErrorStr(sDebug);
 
         close(in_sockfd);
         return -1;
@@ -316,14 +309,11 @@ int EpollServer_Client_Thread::AddNewClient(const int in_sockfd, int &out_epollf
     int iRes = LinuxNetUtil::Add_EpollWatch_NewClient(m_epollfd, in_sockfd, iErr);
     if (0 > iRes)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strDebug = ftag;
-            strDebug += "epoll add fail fd=";
-            strDebug += sof_string::itostr(in_sockfd, strTran);
+        sDebug = ftag;
+        sDebug += "epoll add fail fd=";
+        sDebug += sof_string::itostr(in_sockfd, strTran);
 
-            m_pEventHandler->OnErrorCode(strDebug, iErr);
-        }
+        m_pEventHandler->OnErrorCode(sDebug, iErr);
 
         close(in_sockfd);
         return -1;

@@ -23,10 +23,10 @@ namespace WinSockUtil
             out_iErr = (uint64_t)GetLastError();
 
             string strTran;
-            string strDebug = "Error at WSAStartup with error: ";
-            strDebug += sof_string::itostr(out_iErr, strTran);
+            string sDebug = "Error at WSAStartup with error: ";
+            sDebug += sof_string::itostr(out_iErr, strTran);
 
-            cout << ftag << strDebug << endl;
+            cout << ftag << sDebug << endl;
 
             return -1;
         }
@@ -43,10 +43,10 @@ namespace WinSockUtil
         {
             out_iErr = WSAGetLastError();
             string strTran;
-            string strDebug = "Create of OVERLAPPED socket failed with error: ";
-            strDebug += sof_string::itostr(out_iErr, strTran);
+            string sDebug = "Create of OVERLAPPED socket failed with error: ";
+            sDebug += sof_string::itostr(out_iErr, strTran);
 
-            cout << ftag << strDebug << endl;
+            cout << ftag << sDebug << endl;
 
             WSACleanup();
 
@@ -67,7 +67,7 @@ namespace WinSockUtil
         }
 
         string strTran;
-        string strDebug;
+        string sDebug;
 
         sockaddr_in service;
 
@@ -76,13 +76,13 @@ namespace WinSockUtil
 
         if (strIp.empty() || 0 == port)
         {
-            strDebug = "socket listen error, ip=[";
-            strDebug += strIp;
-            strDebug += "],port=";
-            strDebug += sof_string::itostr(port, strTran);
-            strDebug += "]";
+            sDebug = "socket listen error, ip=[";
+            sDebug += strIp;
+            sDebug += "],port=";
+            sDebug += sof_string::itostr(port, strTran);
+            sDebug += "]";
 
-            cout << ftag << strDebug << endl;
+            cout << ftag << sDebug << endl;
 
             return -1;
         }
@@ -111,10 +111,10 @@ namespace WinSockUtil
             out_iErr = WSAGetLastError();
 
             string strTran;
-            string strDebug = "bind failed with error: ";
-            strDebug += sof_string::itostr(out_iErr, strTran);
+            string sDebug = "bind failed with error: ";
+            sDebug += sof_string::itostr(out_iErr, strTran);
 
-            cout << ftag << strDebug << endl;
+            cout << ftag << sDebug << endl;
 
             closesocket(hListenSocket);
             WSACleanup();
@@ -128,10 +128,10 @@ namespace WinSockUtil
             out_iErr = WSAGetLastError();
 
             string strTran;
-            string strDebug = "set reuse with error: ";
-            strDebug += sof_string::itostr(out_iErr, strTran);
+            string sDebug = "set reuse with error: ";
+            sDebug += sof_string::itostr(out_iErr, strTran);
 
-            cout << ftag << strDebug << endl;
+            cout << ftag << sDebug << endl;
 
             closesocket(hListenSocket);
             WSACleanup();
@@ -146,9 +146,9 @@ namespace WinSockUtil
             out_iErr = WSAGetLastError();
 
             string strTran;
-            string strDebug = "listen failed with error: ";
-            strDebug += sof_string::itostr(out_iErr, strTran);
-            EzLog::e(ftag, strDebug);
+            string sDebug = "listen failed with error: ";
+            sDebug += sof_string::itostr(out_iErr, strTran);
+            cout << ftag << "error " << sDebug << endl;
 
             closesocket(hListenSocket);
             WSACleanup();
@@ -163,12 +163,12 @@ namespace WinSockUtil
 
         out_pIocpdata->m_listenSocket = hListenSocket;
 
-        strDebug = "Listening on address: ";
-        strDebug += strIp;
-        strDebug += ":";
-        strDebug += sof_string::itostr(port, strTran);
+        sDebug = "Listening on address: ";
+        sDebug += strIp;
+        sDebug += ":";
+        sDebug += sof_string::itostr(port, strTran);
 
-        cout << ftag << strDebug << endl;
+        cout << ftag << sDebug << endl;
 
         return 0;
     }
@@ -198,10 +198,10 @@ namespace WinSockUtil
             out_iErr = WSAGetLastError();
 
             string strTran;
-            string strDebug = "WSAIoctl failed with error: ";
-            strDebug += sof_string::itostr(out_iErr, strTran);
+            string sDebug = "WSAIoctl failed with error: ";
+            sDebug += sof_string::itostr(out_iErr, strTran);
 
-            cout << ftag << strDebug << endl;
+            cout << ftag << sDebug << endl;
 
             closesocket(s);
             s = INVALID_SOCKET;
@@ -338,9 +338,9 @@ namespace WinSockUtil
             if (out_iErr != ERROR_IO_PENDING)
             {
                 string strTran;
-                string strDebug = "lpfnAcceptEx failed with error: ";
-                strDebug += sof_string::itostr(out_iErr, strTran);
-                cout << ftag << strDebug << endl;
+                string sDebug = "lpfnAcceptEx failed with error: ";
+                sDebug += sof_string::itostr(out_iErr, strTran);
+                cout << ftag << sDebug << endl;
             }
         }
         else
@@ -355,9 +355,9 @@ namespace WinSockUtil
                 out_iErr = (uint64_t)GetLastError();
 
                 string strTran;
-                string strDebug = "PostQueuedCompletionStatus failed with error: ";
-                strDebug += sof_string::itostr(out_iErr, strTran);
-                cout << ftag << strDebug << endl;
+                string sDebug = "PostQueuedCompletionStatus failed with error: ";
+                sDebug += sof_string::itostr(out_iErr, strTran);
+                cout << ftag << sDebug << endl;
             }
         }
     }
