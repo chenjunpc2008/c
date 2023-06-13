@@ -367,7 +367,7 @@ void EpollServer_Core::Send(uint64_t cid, std::shared_ptr<std::vector<uint8_t>> 
     {
         m_connectionManager.RemoveConnection(cid);
 
-        m_pEventHandler->OnDisconnect(cid, iErr);
+        m_pEventHandler->OnClientDisconnect(cid, iErr);
     }
 }
 
@@ -456,7 +456,7 @@ void EpollServer_Core::Disconnect(uint64_t cid)
 
     m_connectionManager.RemoveConnection(cid);
 
-    m_pEventHandler->OnDisconnect(cid, 0);
+    m_pEventHandler->OnClientDisconnect(cid, 0);
 }
 
 #endif

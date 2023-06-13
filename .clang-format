@@ -1,0 +1,11 @@
+---
+# We'll use defaults from the LLVM style, but with 4 columns indentation.
+BasedOnStyle: LLVM
+IndentWidth: 4
+---
+Language: Cpp
+BreakBeforeBraces: Allman
+# 在换行符之后对齐操作数
+AlignOperands: true
+# 每行字符的限制，0表示没有限制
+ColumnLimit:	100

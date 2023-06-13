@@ -140,21 +140,7 @@ void *EpollServer_Client_Thread::Run(void *pParam)
                     }
                     else
                     {
-                        EpollServer_Core *pServerCore = pThread->m_pEventHandler->GetServiceOwner();
-                        if (nullptr != pServerCore)
-                        {
-                            // 从 connection 删除
-                            pServerCore->m_connectionManager.RemoveConnection(sockfd);
-                        }
-
-                        // Invoke the callback for the client
-                        pThread->m_pEventHandler->OnClientDisconnect(sockfd, iErr);
-
-                        // close
-                        close(sockfd);
-
-                        // 减少client连接计数
-                        pThread->m_aullClientNums -= 1;
+                        pThread->RemoveClient(sockfd, iErr);
 
                         continue;
                     }
@@ -179,8 +165,7 @@ void *EpollServer_Client_Thread::Run(void *pParam)
                         pThread->m_pEventHandler->OnErrorStr(sDebug);
 
                         // wild fd, need to be close.
-                        shutdown(sockfd, SHUT_RDWR);
-                        close(sockfd);
+                        pThread->RemoveClient(sockfd, 0);
 
                         continue;
                     }
@@ -192,19 +177,7 @@ void *EpollServer_Client_Thread::Run(void *pParam)
                     iRes = pClientConn->LoopSend(uiByteTransferred, iErr, iCid, errorSockfd);
                     if (0 > iRes)
                     {
-                        EpollServer_Core *pServerCore = pThread->m_pEventHandler->GetServiceOwner();
-                        if (nullptr != pServerCore)
-                        {
-                            // 从 connection 删除
-                            pServerCore->m_connectionManager.RemoveConnection(iCid);
-                        }
-
-                        // close
-                        close(sockfd);
-
-                        pThread->m_pEventHandler->OnDisconnect(iCid, iErr);
-                        // 减少client连接计数
-                        pThread->m_aullClientNums -= 1;
+                        pThread->RemoveClient(sockfd, iErr);
                     }
                     else
                     {
@@ -246,23 +219,7 @@ void *EpollServer_Client_Thread::Run(void *pParam)
                     pThread->m_pEventHandler->OnErrorCode(sDebug, iErr);
                 }
 
-                if (nullptr != pThread->m_pEventHandler)
-                {
-                    EpollServer_Core *pServerCore = pThread->m_pEventHandler->GetServiceOwner();
-                    if (nullptr != pServerCore)
-                    {
-                        // 从 connection 删除
-                        pServerCore->m_connectionManager.RemoveConnection(sockfd);
-                    }
-
-                    pThread->m_pEventHandler->OnClientDisconnect(sockfd, iErr);
-                }
-
-                // close
-                close(sockfd);
-
-                // 减少client连接计数
-                pThread->m_aullClientNums -= 1;
+                pThread->RemoveClient(sockfd, iErr);
 
                 return 0;
             }
@@ -322,6 +279,56 @@ int EpollServer_Client_Thread::AddNewClient(const int in_sockfd, int &out_epollf
     out_epollfd = m_epollfd;
 
     m_aullClientNums += 1;
+
+    return 0;
+}
+
+int EpollServer_Client_Thread::RemoveClient(const int in_sockfd, const int in_errno)
+{
+    static const std::string ftag("EpollServer_Client_Thread::RemoveClient() ");
+
+    string strTran;
+    string sDebug;
+
+    if (0 > m_epollfd || ThreadPool_Conf::ThreadRunningOption::Running != m_emThreadState)
+    {
+        sDebug = ftag;
+        sDebug += "client thread is stop, not accept remove, fd=";
+        sDebug += sof_string::itostr(in_sockfd, strTran);
+
+        m_pEventHandler->OnErrorStr(sDebug);
+
+        return 0;
+    }
+
+    // del Event
+    int iErr = 0;
+    int iRes = LinuxNetUtil::Del_EpollWatch_Client(m_epollfd, in_sockfd, iErr);
+    if (0 > iRes)
+    {
+        sDebug = ftag;
+        sDebug += "epoll del fail fd=";
+        sDebug += sof_string::itostr(in_sockfd, strTran);
+
+        m_pEventHandler->OnErrorCode(sDebug, iErr);
+    }
+
+    // fd need to be close.
+    shutdown(in_sockfd, SHUT_RDWR);
+    close(in_sockfd);
+
+    EpollServer_Core *pServerCore = m_pEventHandler->GetServiceOwner();
+    if (nullptr != pServerCore)
+    {
+        // 从 connection 删除
+        pServerCore->m_connectionManager.RemoveConnection(in_sockfd);
+    }
+
+    // Invoke the callback for the client
+    m_pEventHandler->OnClientDisconnect(in_sockfd, in_errno);
+
+    // 减少client连接计数
+    m_aullClientNums -= 1;
 
     return 0;
 }

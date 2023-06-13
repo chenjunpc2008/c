@@ -605,6 +605,7 @@ int RecvData(const int sockFd, std::vector<uint8_t> &out_recvData, int &out_errn
     // 数据接受 buf
     const int ciRecvBuffLen = 1024L * 10;
     char recvBuf[ciRecvBuffLen];
+    int iErr = 0;
 
     while (ret >= 0)
     {
@@ -620,7 +621,7 @@ int RecvData(const int sockFd, std::vector<uint8_t> &out_recvData, int &out_errn
             // 当recv()返回值小于等于0时，还需要判断 errno是否等于 EINTR，
             // 如果errno == EINTR
             // 则说明recv函数是由于程序接收到信号后返回的，socket连接还是正常的，不应close掉socket连接。
-            int iErr = errno;
+            iErr = errno;
             if (EINTR == iErr || 0 == iErr)
             {
                 out_errno = 0;
@@ -637,7 +638,7 @@ int RecvData(const int sockFd, std::vector<uint8_t> &out_recvData, int &out_errn
         }
         else if (0 > ret)
         {
-            int iErr = errno;
+            iErr = errno;
             // the socket is nonblocking  (see  fcntl(2)),
             // in  which case the value - 1 is returned and the external variable errno
             // is set to EAGAIN or EWOULDBLOCK.
@@ -649,7 +650,7 @@ int RecvData(const int sockFd, std::vector<uint8_t> &out_recvData, int &out_errn
             else
             {
                 out_errno = iErr;
-                cout << "fd=" << sockFd << "0>ret errno=" << iErr << " serror=" << strerror(iErr)
+                cout << "fd=" << sockFd << " 0>ret errno=" << iErr << " serror=" << strerror(iErr)
                      << endl;
 
                 return -1;
@@ -766,12 +767,11 @@ int Mod_EpollWatch_Send(const int in_epollfd, const int in_sockfd, int &out_errn
     if (0 > iRes)
     {
         out_errno = errno;
-        /*
+
         uint32_t uiEvents = event.events;
-        cout << "error event=" << uiEvents
-        << "epoll add fail fd=" << in_sockfd << " error=" << iErr
-        << " serror=" << strerror(iErr) << endl;
-        */
+        cout << "error event=" << uiEvents << " epoll mod fail fd=" << in_sockfd
+             << " error=" << out_errno << " serror=" << strerror(out_errno) << endl;
+
         return -1;
     }
 
@@ -792,6 +792,29 @@ int Mod_EpollWatch_CancellSend(const int in_epollfd, const int in_sockfd, int &o
         /*
         uint32_t uiEvents = event.events;
         cout << "error event=" << uiEvents
+        << " epoll mod fail fd=" << in_sockfd << " error=" << iErr
+        << " serror=" << strerror(iErr) << endl;
+        */
+        return -1;
+    }
+
+    return 0;
+}
+
+int Del_EpollWatch_Client(const int in_epollfd, const int in_sockfd, int &out_errno)
+{
+    struct epoll_event event;
+    event.events = EPOLLIN | EPOLLET | EPOLLERR | EPOLLRDHUP | EPOLLOUT;
+    event.data.fd = in_sockfd;
+
+    // add Event
+    int iRes = epoll_ctl(in_epollfd, EPOLL_CTL_DEL, in_sockfd, &event);
+    if (0 > iRes)
+    {
+        out_errno = errno;
+        /*
+        uint32_t uiEvents = event.events;
+        cout << "error event=" << uiEvents
         << "epoll add fail fd=" << in_sockfd << " error=" << iErr
         << " serror=" << strerror(iErr) << endl;
         */
@@ -800,6 +823,7 @@ int Mod_EpollWatch_CancellSend(const int in_epollfd, const int in_sockfd, int &o
 
     return 0;
 }
-} // namespace LinuxNetUtil
+
+}; // namespace LinuxNetUtil
 
 #endif

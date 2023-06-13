@@ -15,11 +15,11 @@ class EventBaseHandler
     //
     // Members
     //
-protected:
+  protected:
     //
     // Functions
     //
-public:
+  public:
     EventBaseHandler(void);
     virtual ~EventBaseHandler(void);
 
@@ -121,7 +121,7 @@ public:
     This callback is invoked through the context of an IOCP thread, which
     may or may not be your main thread's context.
     */
-    virtual void OnDisconnect(uint64_t cid, int errorcode);
+    virtual void OnDisconnect(int errorcode);
 
     /*
     @details

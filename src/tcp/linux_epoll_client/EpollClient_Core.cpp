@@ -18,7 +18,7 @@ const int EpollClient_Core::MAX_CLIENT_EVENTS = 100;
 
 EpollClient_Core::EpollClient_Core(std::shared_ptr<EpollClient_EventHandler> pEventHandler)
     : m_iClientStatus(CLIENT_STATUS::CLIENT_STATUS_CLOSED), m_epollfd(-1), m_clientfd(-1),
-      m_pEventHandler(pEventHandler), m_strServerIp(""), m_uiServerPort(0), m_bReconnect(false)
+      m_pEventHandler(pEventHandler), m_strServerIp(""), m_uiServerPort(0)
 {
     // ctor
     if (NULL != pEventHandler)
@@ -58,10 +58,23 @@ int EpollClient_Core::Connect(const string &in_serverip, const unsigned int in_p
 {
     static const std::string ftag("EpollClient_Core::Connect() ");
 
+    std::lock_guard<std::mutex> lock(m_cliMutex);
+
     m_strServerIp = in_serverip;
     m_uiServerPort = in_port;
 
     int iWaitnum = 0;
+    int iRes = 0;
+    if (CLIENT_STATUS::CLIENT_STATUS_CLOSED == m_iClientStatus)
+    {
+        iRes = Init();
+        if (0 != iRes)
+        {
+            cout << ftag << "Init failed" << endl;
+
+            return -1;
+        }
+    }
 
     do
     {
@@ -77,10 +90,9 @@ int EpollClient_Core::Connect(const string &in_serverip, const unsigned int in_p
         int iRes = AddNewClient();
         if (0 != iRes)
         {
-            if (nullptr != m_pEventHandler)
-            {
-                m_pEventHandler->OnErrorStr("AddNewClient failed");
-            }
+            m_pEventHandler->OnErrorStr("AddNewClient failed");
+
+            disconnect_nolock(0);
             return -1;
         }
         else
@@ -104,6 +116,53 @@ void EpollClient_Core::Disconnect(void)
 {
     const string ftag("EpollClient_Core::Disconnect() ");
 
+    std::lock_guard<std::mutex> lock(m_cliMutex);
+
+    disconnect_nolock(0);
+}
+
+/*
+关闭线程
+
+Return :
+0 -- 成功
+-1 -- 失败
+*/
+void EpollClient_Core::disconnect_nolock(const int in_errNo)
+{
+    const string ftag("EpollClient_Core::Disconnect_nolock() ");
+
+    string strTran;
+    string sDebug;
+    int iErr = 0;
+    int iRes = 0;
+
+    if (0 < m_clientfd)
+    {
+        iRes = LinuxNetUtil::Del_EpollWatch_Client(m_epollfd, m_clientfd, iErr);
+        if (0 > iRes)
+        {
+            sDebug = ftag;
+            sDebug += "epoll del fail fd=";
+            sDebug += sof_string::itostr(m_clientfd, strTran);
+
+            m_pEventHandler->OnErrorCode(sDebug, iErr);
+        }
+
+        // fd need to be close.
+        shutdown(m_clientfd, SHUT_RDWR);
+        close(m_clientfd);
+
+        // 从 connection 删除
+        m_connectionManager.RemoveConnection(m_clientfd);
+
+        // Invoke the callback for the client
+        m_pEventHandler->OnDisconnect(in_errNo);
+    }
+
+    m_clientfd = -1;
+    m_iClientStatus = CLIENT_STATUS::CLIENT_STATUS_CLOSED;
+
     // 先通知关闭
     NotifyStopThread_Immediate();
 
@@ -117,11 +176,6 @@ void EpollClient_Core::Disconnect(void)
 
     // 确认并强行关闭
     StopThread();
-
-    shutdown(m_clientfd, SHUT_RDWR);
-    close(m_clientfd);
-    m_clientfd = -1;
-    m_iClientStatus = CLIENT_STATUS::CLIENT_STATUS_CLOSED;
 }
 
 /*
@@ -145,10 +199,7 @@ int EpollClient_Core::StartThread(void)
     iRes = ThreadBase::StartThread(&EpollClient_Core::Run);
     if (0 != iRes)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            m_pEventHandler->OnErrorStr("StartThread failed");
-        }
+        m_pEventHandler->OnErrorStr("StartThread failed");
 
         return -1;
     }
@@ -189,8 +240,6 @@ void *EpollClient_Core::Run(void *pParam)
     while ((ThreadPool_Conf::Running == pThread->m_emThreadRunOp) ||
            (ThreadPool_Conf::TillTaskFinish == pThread->m_emThreadRunOp))
     {
-        // pThread->AddNewClient();
-
         // epoll_wait
         int ret = epoll_wait(epollfd, eventList, EpollClient_Core::MAX_CLIENT_EVENTS,
                              ThreadPool_Conf::g_dwWaitMS_Event);
@@ -236,25 +285,12 @@ void *EpollClient_Core::Run(void *pParam)
                     iRes = LinuxNetUtil::RecvData(sockfd, rcvData, iErr);
                     if (0 == iRes)
                     {
-                        if (nullptr != pThread->m_pEventHandler)
-                        {
-                            // Invoke the callback for the client
-                            pThread->m_pEventHandler->OnReceiveData(sockfd, rcvData);
-                        }
+                        // Invoke the callback for the client
+                        pThread->m_pEventHandler->OnReceiveData(sockfd, rcvData);
                     }
                     else
                     {
-                        // 从 connection 删除
-                        pThread->m_connectionManager.RemoveConnection(sockfd);
-
-                        if (nullptr != pThread->m_pEventHandler)
-                        {
-                            // Invoke the callback for the client
-                            pThread->m_pEventHandler->OnClientDisconnect(sockfd, iErr);
-                        }
-
-                        // close
-                        close(sockfd);
+                        pThread->disconnect_nolock(iErr);
 
                         continue;
                     }
@@ -271,7 +307,6 @@ void *EpollClient_Core::Run(void *pParam)
                         pThread->m_connectionManager.GetConnection(sockfd);
                     if (nullptr == pClientConn)
                     {
-                        if (nullptr != pThread->m_pEventHandler)
                         {
                             string strTran;
                             string sDebug = "connection manage couldn't find id=";
@@ -280,14 +315,8 @@ void *EpollClient_Core::Run(void *pParam)
                             pThread->m_pEventHandler->OnErrorStr(sDebug);
                         }
 
-                        // wild fd, need to be close.
-                        shutdown(sockfd, SHUT_RDWR);
-                        close(sockfd);
+                        pThread->disconnect_nolock(EPOLLERR);
 
-                        if (nullptr != pThread->m_pEventHandler)
-                        {
-                            pThread->m_pEventHandler->OnDisconnect(sockfd, EPOLLERR);
-                        }
                         continue;
                     }
 
@@ -298,13 +327,7 @@ void *EpollClient_Core::Run(void *pParam)
                     iRes = pClientConn->LoopSend(uiByteTransferred, iErr, iCid, errorSockfd);
                     if (0 > iRes)
                     {
-                        // 从 connection 删除
-                        pThread->m_connectionManager.RemoveConnection(sockfd);
-
-                        if (nullptr != pThread->m_pEventHandler)
-                        {
-                            pThread->m_pEventHandler->OnDisconnect(sockfd, iErr);
-                        }
+                        pThread->disconnect_nolock(iErr);
                     }
                     else
                     {
@@ -355,19 +378,7 @@ void *EpollClient_Core::Run(void *pParam)
                     }
                 }
 
-                // close
-                shutdown(sockfd, SHUT_RDWR);
-                close(sockfd);
-
-                // 从 connection 删除
-                pThread->m_connectionManager.RemoveConnection(sockfd);
-
-                if (nullptr != pThread->m_pEventHandler)
-                {
-                    pThread->m_pEventHandler->OnClientDisconnect(sockfd, iErr);
-                }
-
-                return 0;
+                pThread->disconnect_nolock(iErr);
             }
         }
     }
@@ -414,10 +425,8 @@ int EpollClient_Core::AddNewClient(void)
     m_clientfd = LinuxNetUtil::CreateConnectSocket(m_strServerIp, m_uiServerPort, iErr);
     if (0 > m_clientfd)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            m_pEventHandler->OnErrorCode("socket client create error", iErr);
-        }
+        m_pEventHandler->OnErrorCode("socket client create error", iErr);
+
         m_iClientStatus = CLIENT_STATUS::CLIENT_STATUS_CLOSED;
         return -1;
     }
@@ -435,7 +444,6 @@ int EpollClient_Core::AddNewClient(void)
 
     if (0 > m_epollfd || ThreadPool_Conf::ThreadRunningOption::Running != m_emThreadState)
     {
-        if (nullptr != m_pEventHandler)
         {
             string strTran;
             string sDebug = "client thread is stop, not accept incoming, fd=";
@@ -454,7 +462,6 @@ int EpollClient_Core::AddNewClient(void)
     int iRes = LinuxNetUtil::Add_EpollWatch_NewClient(m_epollfd, m_clientfd, iErr);
     if (0 > iRes)
     {
-        if (nullptr != m_pEventHandler)
         {
             string strTran;
             string sDebug = "epoll add fail fd=";
@@ -481,10 +488,7 @@ int EpollClient_Core::AddNewClient(void)
 
     m_connectionManager.AddConnection(c);
 
-    if (nullptr != m_pEventHandler)
-    {
-        m_pEventHandler->OnNewConnection(c->m_id, c->m_cinfo, c);
-    }
+    m_pEventHandler->OnNewConnection(c->m_id, c->m_cinfo, c);
 
     return 0;
 }
@@ -495,41 +499,39 @@ int EpollClient_Core::AddNewClient(void)
 Param :
 std::shared_ptr<std::vector<uint8_t>>& pdata : 待发送数据
 
-Return :
-void
+Return int : 0 -- 成功
+    -1 -- client error
+    -2 -- other error
 */
-void EpollClient_Core::Send(std::shared_ptr<std::vector<uint8_t>> &pdata)
+int EpollClient_Core::Send(std::shared_ptr<std::vector<uint8_t>> &pdata)
 {
     static const string ftag("EpollClient_Core::Send() ");
+
+    std::lock_guard<std::mutex> lock(m_cliMutex);
 
     int iErr = 0;
 
     if (0 >= m_clientfd)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strTran;
-            string sDebug = "trying to send to illegal id=";
-            sDebug += sof_string::itostr(m_clientfd, strTran);
+        string strTran;
+        string sDebug = "trying to send to illegal id=";
+        sDebug += sof_string::itostr(m_clientfd, strTran);
 
-            m_pEventHandler->OnErrorCode(sDebug, iErr);
-        }
+        m_pEventHandler->OnErrorCode(sDebug, iErr);
 
-        return;
+        return -1;
     }
 
     if (nullptr == pdata)
     {
-        if (nullptr != m_pEventHandler)
-        {
-            string strTran;
-            string sDebug = "trying to send empty message id=";
-            sDebug += sof_string::itostr(m_clientfd, strTran);
 
-            m_pEventHandler->OnErrorCode(sDebug, iErr);
-        }
+        string strTran;
+        string sDebug = "trying to send empty message id=";
+        sDebug += sof_string::itostr(m_clientfd, strTran);
 
-        return;
+        m_pEventHandler->OnErrorCode(sDebug, iErr);
+
+        return -2;
     }
 
     /*
@@ -549,12 +551,11 @@ void EpollClient_Core::Send(std::shared_ptr<std::vector<uint8_t>> &pdata)
     int iRes = m_connectionManager.Send(m_clientfd, pdata, iErr, iConnId, iClientSockfd);
     if (0 != iRes)
     {
-        m_connectionManager.RemoveConnection(m_clientfd);
-
-        if (nullptr != m_pEventHandler)
-        {
-            m_pEventHandler->OnDisconnect(m_clientfd, iErr);
-        }
+        disconnect_nolock(iErr);
+        return -2;
     }
+
+    return 0;
 }
+
 #endif

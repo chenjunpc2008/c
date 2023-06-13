@@ -15,17 +15,20 @@ int main()
 {
     cout << "Hello world!" << endl;
 
+    string remoteIp = "127.0.0.1";
+    unsigned int remotePort = 10005;
+
     LnxTcpSample_Client_Handler *ptrH = new LnxTcpSample_Client_Handler();
     shared_ptr<EpollClient_EventHandler> pEventHandler((EpollClient_EventHandler *)ptrH);
 
     EpollClient_Core esvr(pEventHandler);
-    int iRes = esvr.Init();
+
+    int iRes = esvr.Connect(remoteIp, remotePort);
     if (0 != iRes)
     {
-        cout << "client init failed" << endl;
+        cout << "client Connect failed ip=" << remoteIp << " port=" << remotePort << endl;
         return -1;
     }
-    esvr.Connect("127.0.0.1", 10005);
 
     shared_ptr<vector<uint8_t>> pbsData = nullptr;
 
@@ -42,7 +45,23 @@ int main()
             return -1;
         }
 
-        esvr.Send(pbsData);
+        iRes = esvr.Send(pbsData);
+        if (0 == iRes || -2 == iRes)
+        {
+            continue;
+        }
+        else if (-1 == iRes)
+        {
+            sleep(10);
+
+            cout << "trying to reconnect to ip=" << remoteIp << " port=" << remotePort << endl;
+            // reconnect
+            iRes = esvr.Connect(remoteIp, remotePort);
+            if (0 != iRes)
+            {
+                cout << "client Connect failed ip=" << remoteIp << " port=" << remotePort << endl;
+            }
+        }
     }
 
     esvr.Disconnect();

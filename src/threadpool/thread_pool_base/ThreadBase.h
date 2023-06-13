@@ -18,7 +18,7 @@ class ThreadBase
     //
     // Members
     //
-protected:
+  protected:
     //
     // 线程属性
     //
@@ -53,30 +53,18 @@ protected:
     //
     // Functions
     //
-public:
+  public:
     ThreadBase(void);
     explicit ThreadBase(const uint64_t uiId);
     virtual ~ThreadBase(void);
 
-    void SetThreadId(const uint64_t uiId)
-    {
-        m_dThreadId = (unsigned long)uiId;
-    }
+    void SetThreadId(const uint64_t uiId) { m_dThreadId = (unsigned long)uiId; }
 
-    const uint64_t GetThreadId(void) const
-    {
-        return m_dThreadId;
-    }
+    const uint64_t GetThreadId(void) const { return m_dThreadId; }
 
-    void SetEventCb(pf_THREAD_POOL_ONEVENT pfEvent)
-    {
-        m_pfOnEvent = pfEvent;
-    }
+    void SetEventCb(pf_THREAD_POOL_ONEVENT pfEvent) { m_pfOnEvent = pfEvent; }
 
-    void SetErrorCb(pf_THREAD_POOL_ONERROR pfError)
-    {
-        m_pfOnError = pfError;
-    }
+    void SetErrorCb(pf_THREAD_POOL_ONERROR pfError) { m_pfOnError = pfError; }
 
     /*
     启动线程
@@ -133,10 +121,10 @@ public:
     */
     int WaitStopThread(void);
 
-    //有消息，通知线程处理
+    // 有消息，通知线程处理
     bool SetThreadEvent(void);
 
-protected:
+  protected:
 #ifdef _MSC_VER
 #else
     /*
@@ -163,11 +151,21 @@ protected:
     pthread_cleanup_pop(0);
 
     // NOTE:
-    // 必须要注意的是，如果线程处于pthread_CANCEL_ASYNCHRONOUS状态，上述代码段就有可能出错，因为CANCEL事件有可能在pthread_cleanup_push()和pthread_mutex_lock()之间发生，
-    // 或者在pthread_mutex_unlock()和pthread_cleanup_pop()之间发生，从而导致清理函数unlock一个并没有加锁的mutex变量，造成错误。
-    // 因此，在使用清理函数的时候，都应该暂时设置成pthread_CANCEL_DEFERRED模式。为此，POSIX的Linux实现中还提供了
+    //
+    必须要注意的是，如果线程处于pthread_CANCEL_ASYNCHRONOUS状态，上述代码段就有可能出错，因为CANCEL事件有可能在pthread_cleanup_push()和pthread_mutex_lock()之间发生，
+    //
+    或者在pthread_mutex_unlock()和pthread_cleanup_pop()之间发生，从而导致清理函数unlock一个并没有加锁的mutex变量，造成错误。
+    //
+    因此，在使用清理函数的时候，都应该暂时设置成pthread_CANCEL_DEFERRED模式。为此，POSIX的Linux实现中还提供了
     // 一对不保证可移植的pthread_cleanup_push_defer_np()/pthread_cleanup_pop_defer_np()扩展函数
     */
+
+    // pthread join clean
+    void JoinClean(void);
+
+    // pthread join clean
+    void TimedJoinClean(bool bForceClose);
+
 #endif
 };
 

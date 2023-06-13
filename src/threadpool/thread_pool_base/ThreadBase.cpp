@@ -12,37 +12,29 @@
 
 #include "util/tool_string/sof_string.h"
 
+using namespace std;
+
 ThreadBase::ThreadBase(void)
     : m_dThreadId(0),
 #ifdef _MSC_VER
-      m_hThread(INVALID_HANDLE_VALUE),
-      m_hEvent(INVALID_HANDLE_VALUE),
+      m_hThread(INVALID_HANDLE_VALUE), m_hEvent(INVALID_HANDLE_VALUE),
 #else
-      m_hThread(0),
-      m_mutexCond(PTHREAD_MUTEX_INITIALIZER),
-      m_condEvent(PTHREAD_COND_INITIALIZER),
+      m_hThread(0), m_mutexCond(PTHREAD_MUTEX_INITIALIZER), m_condEvent(PTHREAD_COND_INITIALIZER),
 #endif
-      m_emThreadState(ThreadPool_Conf::STOPPED),
-      m_emThreadRunOp(ThreadPool_Conf::Running),
-      m_pfOnEvent(nullptr),
-      m_pfOnError(nullptr)
+      m_emThreadState(ThreadPool_Conf::STOPPED), m_emThreadRunOp(ThreadPool_Conf::Running),
+      m_pfOnEvent(nullptr), m_pfOnError(nullptr)
 {
 }
 
 ThreadBase::ThreadBase(const uint64_t uiId)
     : m_dThreadId((unsigned long)uiId),
 #ifdef _MSC_VER
-      m_hThread(INVALID_HANDLE_VALUE),
-      m_hEvent(INVALID_HANDLE_VALUE),
+      m_hThread(INVALID_HANDLE_VALUE), m_hEvent(INVALID_HANDLE_VALUE),
 #else
-      m_hThread(0),
-      m_mutexCond(PTHREAD_MUTEX_INITIALIZER),
-      m_condEvent(PTHREAD_COND_INITIALIZER),
+      m_hThread(0), m_mutexCond(PTHREAD_MUTEX_INITIALIZER), m_condEvent(PTHREAD_COND_INITIALIZER),
 #endif
-      m_emThreadState(ThreadPool_Conf::STOPPED),
-      m_emThreadRunOp(ThreadPool_Conf::Running),
-      m_pfOnEvent(nullptr),
-      m_pfOnError(nullptr)
+      m_emThreadState(ThreadPool_Conf::STOPPED), m_emThreadRunOp(ThreadPool_Conf::Running),
+      m_pfOnEvent(nullptr), m_pfOnError(nullptr)
 {
 }
 
@@ -67,15 +59,15 @@ Return :
 #ifdef _MSC_VER
 int ThreadBase::StartThread(LPTHREAD_START_ROUTINE lpFunc)
 {
-    const std::string ftag("ThreadBase::StartThread() ");
+    const string ftag("ThreadBase::StartThread() ");
 
     if (INVALID_HANDLE_VALUE == m_hEvent)
     {
         m_hEvent = CreateEvent(NULL, false, true, NULL);
         if (INVALID_HANDLE_VALUE == m_hEvent)
         {
-            std::cout << ftag << "CreateEvent error" << std::endl;
-            std::exception e("CreateEvent error");
+            cout << ftag << "CreateEvent error" << endl;
+            exception e("CreateEvent error");
             throw e;
         }
     }
@@ -89,8 +81,8 @@ int ThreadBase::StartThread(LPTHREAD_START_ROUTINE lpFunc)
 
         if (INVALID_HANDLE_VALUE == m_hThread)
         {
-            std::cout << ftag << "CreateThread error INVALID_HANDLE_VALUE" << std::endl;
-            std::exception e("CreateThread error INVALID_HANDLE_VALUE");
+            cout << ftag << "CreateThread error INVALID_HANDLE_VALUE" << endl;
+            exception e("CreateThread error INVALID_HANDLE_VALUE");
             throw e;
         }
 
@@ -106,7 +98,7 @@ int ThreadBase::StartThread(LPTHREAD_START_ROUTINE lpFunc)
 #else
 int ThreadBase::StartThread(PTRFUN lpFunc)
 {
-    const std::string ftag("ThreadBase::StartThread() ");
+    const string ftag("ThreadBase::StartThread() ");
 
     if (0 == m_hThread)
     {
@@ -118,9 +110,11 @@ int ThreadBase::StartThread(PTRFUN lpFunc)
         {
             // reset
             m_hThread = 0;
+            m_emThreadState = ThreadPool_Conf::STOPPED;
+            m_dThreadId = 0;
 
-            std::cout << ftag << "pthread_create errorno=" << iRes << std::endl;
-            std::runtime_error e("pthread_create error");
+            cout << ftag << "pthread_create errorno=" << iRes << endl;
+            runtime_error e("pthread_create error");
             throw e;
         }
 
@@ -177,7 +171,7 @@ Return :
 #ifdef _MSC_VER
 int ThreadBase::WaitStopThread(void)
 {
-    // const std::string ftag("ThreadBase::WaitStopThread() ");
+    // const string ftag("ThreadBase::WaitStopThread() ");
 
     if (ThreadPool_Conf::STOPPED == m_emThreadState)
     {
@@ -213,7 +207,7 @@ int ThreadBase::WaitStopThread(void)
 #else
 int ThreadBase::WaitStopThread(void)
 {
-    const std::string ftag("ThreadBase::WaitStopThread() ");
+    const string ftag("ThreadBase::WaitStopThread() ");
 
     if (ThreadPool_Conf::STOPPED == m_emThreadState)
     {
@@ -238,21 +232,20 @@ int ThreadBase::WaitStopThread(void)
             int iRes = pthread_join(m_hThread, NULL);
             if (0 != iRes)
             {
-                std::string strTran;
-                std::string sErrMsg(ftag);
+                string strTran;
+                string sErrMsg(ftag);
                 sErrMsg += "pthread_join errorno=";
                 sErrMsg += sof_string::itostr(iRes, strTran);
                 if (nullptr != m_pfOnError)
                 {
                     m_pfOnError(sErrMsg);
                 }
-                std::cout << sErrMsg << std::endl;
+                cout << sErrMsg << endl;
 
                 return -1;
             }
 
             m_hThread = 0;
-
             m_emThreadState = ThreadPool_Conf::STOPPED;
             m_dThreadId = 0;
         }
@@ -278,7 +271,7 @@ Return :
 #ifdef _MSC_VER
 int ThreadBase::StopThread(bool bForceClose)
 {
-    const std::string ftag("ThreadBase::StopThread() ");
+    const string ftag("ThreadBase::StopThread() ");
 
     if (ThreadPool_Conf::STOPPED == m_emThreadState)
     {
@@ -293,20 +286,16 @@ int ThreadBase::StopThread(bool bForceClose)
             TerminateThread(m_hThread, 9);
 
             {
-                std::string strTran;
-                std::string sMsg(ftag);
+                string strTran;
+                string sMsg(ftag);
                 sMsg += "thread Terminated id=";
                 sMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
                 if (nullptr != m_pfOnEvent)
                 {
                     m_pfOnEvent(sMsg);
                 }
-                std::cout << sMsg << std::endl;
+                cout << sMsg << endl;
             }
-
-            m_hThread = INVALID_HANDLE_VALUE;
-            m_emThreadState = ThreadPool_Conf::STOPPED;
-            m_dThreadId = 0;
         }
     }
     else
@@ -316,39 +305,44 @@ int ThreadBase::StopThread(bool bForceClose)
 
         SetThreadEvent();
 
-        //等待线程返回
+        // 等待线程返回
         DWORD dwWait = WaitForSingleObject(m_hThread, ThreadPool_Conf::g_dwWaitMS_ThreadExit);
         if (WAIT_TIMEOUT == dwWait && bForceClose)
         {
             TerminateThread(m_hThread, 9);
 
             {
-                std::string strTran;
-                std::string sMsg(ftag);
+                string strTran;
+                string sMsg(ftag);
                 sMsg += "thread Terminated id=";
                 sMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
                 if (nullptr != m_pfOnEvent)
                 {
                     m_pfOnEvent(sMsg);
                 }
-                std::cout << sMsg << std::endl;
+                cout << sMsg << endl;
             }
-
-            m_hThread = INVALID_HANDLE_VALUE;
-            m_emThreadState = ThreadPool_Conf::STOPPED;
-            m_dThreadId = 0;
         }
     }
+
+    m_hThread = INVALID_HANDLE_VALUE;
+    m_emThreadState = ThreadPool_Conf::STOPPED;
+    m_dThreadId = 0;
 
     return 0;
 }
 #else
 int ThreadBase::StopThread(bool bForceClose)
 {
-    const std::string ftag("ThreadBase::StopThread() ");
+    const string ftag("ThreadBase::StopThread() ");
 
     if (ThreadPool_Conf::STOPPED == m_emThreadState)
     {
+        TimedJoinClean(bForceClose);
+
+        m_hThread = 0;
+        m_emThreadState = ThreadPool_Conf::STOPPED;
+        m_dThreadId = 0;
         return 0;
     }
 
@@ -360,8 +354,8 @@ int ThreadBase::StopThread(bool bForceClose)
             int iRes = pthread_cancel(m_hThread);
             if (0 != iRes)
             {
-                std::string strTran;
-                std::string sErrMsg(ftag);
+                string strTran;
+                string sErrMsg(ftag);
                 sErrMsg += "pthread_cancel in tid=";
                 sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
                 sErrMsg += " errno=";
@@ -370,57 +364,10 @@ int ThreadBase::StopThread(bool bForceClose)
                 {
                     m_pfOnError(sErrMsg);
                 }
-                std::cout << sErrMsg << std::endl;
+                cout << sErrMsg << endl;
             }
 
-            void *result;
-            /* Join with thread to see what its exit status was */
-            iRes = pthread_join(m_hThread, &result);
-            if (0 != iRes)
-            {
-                std::string strTran;
-                std::string sErrMsg(ftag);
-                sErrMsg += "pthread_join in tid=";
-                sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
-                sErrMsg += " errno=";
-                sErrMsg += sof_string::itostr((uint64_t)iRes, strTran);
-                if (nullptr != m_pfOnError)
-                {
-                    m_pfOnError(sErrMsg);
-                }
-                std::cout << sErrMsg << std::endl;
-            }
-
-            if (PTHREAD_CANCELED == result)
-            {
-                std::string strTran;
-                std::string sMsg(ftag);
-                sMsg += "thread was canceled id=";
-                sMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
-                if (nullptr != m_pfOnEvent)
-                {
-                    m_pfOnEvent(sMsg);
-                }
-                std::cout << sMsg << std::endl;
-            }
-            else
-            {
-                std::string strTran;
-                std::string sErrMsg(ftag);
-                sErrMsg += "thread wasn't canceled (shouldn't happen!) tid=";
-                sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
-                sErrMsg += " res=";
-                sErrMsg += sof_string::itostr((uint64_t)iRes, strTran);
-                if (nullptr != m_pfOnError)
-                {
-                    m_pfOnError(sErrMsg);
-                }
-                std::cout << sErrMsg << std::endl;
-            }
-
-            m_hThread = 0;
-            m_emThreadState = ThreadPool_Conf::STOPPED;
-            m_dThreadId = 0;
+            JoinClean();
         }
     }
     else
@@ -430,89 +377,114 @@ int ThreadBase::StopThread(bool bForceClose)
 
         SetThreadEvent();
 
-        struct timespec ts;
-        //等待线程返回
-        ts.tv_sec = 0;
-        ts.tv_nsec = ThreadPool_Conf::g_dwWaitMS_ThreadExit * 1000L;
-
-        int iRes = pthread_timedjoin_np(m_hThread, NULL, &ts);
-        if (0 != iRes && bForceClose)
-        {
-            iRes = pthread_cancel(m_hThread);
-            if (0 != iRes)
-            {
-                std::string strTran;
-                std::string sErrMsg(ftag);
-                sErrMsg += "pthread_cancel in tid=";
-                sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
-                sErrMsg += " res=";
-                sErrMsg += sof_string::itostr((uint64_t)iRes, strTran);
-                if (nullptr != m_pfOnError)
-                {
-                    m_pfOnError(sErrMsg);
-                }
-                std::cout << sErrMsg << std::endl;
-            }
-
-            void *result;
-            /* Join with thread to see what its exit status was */
-            iRes = pthread_join(m_hThread, &result);
-            if (0 != iRes)
-            {
-                std::string strTran;
-                std::string sErrMsg(ftag);
-                sErrMsg += "pthread_join in tid=";
-                sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
-                sErrMsg += " res=";
-                sErrMsg += sof_string::itostr((uint64_t)iRes, strTran);
-                if (nullptr != m_pfOnError)
-                {
-                    m_pfOnError(sErrMsg);
-                }
-                std::cout << sErrMsg << std::endl;
-            }
-
-            if (PTHREAD_CANCELED == result)
-            {
-                std::string strTran;
-                std::string sMsg(ftag);
-                sMsg += "thread was canceled id=";
-                sMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
-                if (nullptr != m_pfOnEvent)
-                {
-                    m_pfOnEvent(sMsg);
-                }
-                std::cout << sMsg << std::endl;
-            }
-            else
-            {
-                std::string strTran;
-                std::string sErrMsg(ftag);
-                sErrMsg += "thread wasn't canceled (shouldn't happen!) tid=";
-                sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
-                sErrMsg += " result=";
-                sErrMsg += sof_string::itostr((uint64_t)result, strTran);
-                if (nullptr != m_pfOnError)
-                {
-                    m_pfOnError(sErrMsg);
-                }
-                std::cout << sErrMsg << std::endl;
-            }
-
-            /* Free memory allocated by thread */
-            free(result);
-
-            m_hThread = 0;
-            m_emThreadState = ThreadPool_Conf::STOPPED;
-            m_dThreadId = 0;
-        }
+        TimedJoinClean(bForceClose);
     }
+
+    m_hThread = 0;
+    m_emThreadState = ThreadPool_Conf::STOPPED;
+    m_dThreadId = 0;
 
     return 0;
 }
+
+// pthread join clean
+void ThreadBase::JoinClean(void)
+{
+    const string ftag("ThreadBase::JoinClean() ");
+
+    if (0 == m_hThread)
+    {
+        return;
+    }
+
+    void *result;
+    /* Join with thread to see what its exit status was */
+    int iRes = pthread_join(m_hThread, &result);
+    if (0 != iRes)
+    {
+        string strTran;
+        string sErrMsg(ftag);
+        sErrMsg += "pthread_join in tid=";
+        sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
+        sErrMsg += " res=";
+        sErrMsg += sof_string::itostr((uint64_t)iRes, strTran);
+        if (nullptr != m_pfOnError)
+        {
+            m_pfOnError(sErrMsg);
+        }
+        cout << sErrMsg << endl;
+    }
+
+    if (PTHREAD_CANCELED == result)
+    {
+        string strTran;
+        string sMsg(ftag);
+        sMsg += "thread was canceled id=";
+        sMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
+        if (nullptr != m_pfOnEvent)
+        {
+            m_pfOnEvent(sMsg);
+        }
+        cout << sMsg << endl;
+    }
+    else
+    {
+        string strTran;
+        string sErrMsg(ftag);
+        sErrMsg += "thread wasn't canceled (shouldn't happen!) tid=";
+        sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
+        sErrMsg += " result=";
+        sErrMsg += sof_string::itostr((uint64_t)result, strTran);
+        if (nullptr != m_pfOnError)
+        {
+            m_pfOnError(sErrMsg);
+        }
+        cout << sErrMsg << endl;
+    }
+
+    /* Free memory allocated by thread */
+    free(result);
+}
+
+// pthread join clean
+void ThreadBase::TimedJoinClean(bool bForceClose)
+{
+    const string ftag("ThreadBase::TimedJoinClean() ");
+
+    if (0 == m_hThread)
+    {
+        return;
+    }
+
+    struct timespec ts;
+    // 等待线程返回
+    ts.tv_sec = 0;
+    ts.tv_nsec = ThreadPool_Conf::g_dwWaitMS_ThreadExit * 1000L;
+
+    int iRes = pthread_timedjoin_np(m_hThread, NULL, &ts);
+    if (0 != iRes && bForceClose)
+    {
+        iRes = pthread_cancel(m_hThread);
+        if (0 != iRes)
+        {
+            string strTran;
+            string sErrMsg(ftag);
+            sErrMsg += "pthread_cancel in tid=";
+            sErrMsg += sof_string::itostr((uint64_t)m_dThreadId, strTran);
+            sErrMsg += " res=";
+            sErrMsg += sof_string::itostr((uint64_t)iRes, strTran);
+            if (nullptr != m_pfOnError)
+            {
+                m_pfOnError(sErrMsg);
+            }
+            cout << sErrMsg << endl;
+        }
+    }
+}
+
 #endif
 
-//有消息，通知线程处理
+// 有消息，通知线程处理
 bool ThreadBase::SetThreadEvent(void)
 {
 #ifdef _MSC_VER

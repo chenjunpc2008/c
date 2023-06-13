@@ -18,11 +18,11 @@
 
 #include "tcp/linux_socket_base/LinuxNetUtil.h"
 
-#include "tcp/socket_conn_manage_base/EventBaseHandler.h"
 #include "tcp/socket_conn_manage_base/ConnectionInformation.h"
+#include "tcp/socket_conn_manage_base/EventBaseHandler.h"
 
-#include "tcp/socket_conn_manage_base/Epoll_ConnectionManager.h"
 #include "EpollClient_EventHandler.h"
+#include "tcp/socket_conn_manage_base/Epoll_ConnectionManager.h"
 
 /*
 TCP client 用来 和服务端通信以及管理用户连接的线程
@@ -32,7 +32,7 @@ class EpollClient_Core : public ThreadBase
     //
     // Members
     //
-public:
+  public:
     // max epoll size
     static const int MAX_EPOLL_EVENTS;
 
@@ -48,7 +48,9 @@ public:
     // client connection manager
     Epoll_ConnectionManager m_connectionManager;
 
-protected:
+  protected:
+    std::mutex m_cliMutex;
+
     enum CLIENT_STATUS m_iClientStatus;
 
     int m_epollfd;
@@ -62,26 +64,18 @@ protected:
     // server socket port
     unsigned int m_uiServerPort;
 
-    // 断线是否重连
-    bool m_bReconnect;
-
     //
     // Functions
     //
-public:
+  public:
     explicit EpollClient_Core(std::shared_ptr<EpollClient_EventHandler> pEventHandler);
     virtual ~EpollClient_Core();
-
-    int Init(void);
 
     int Connect(const std::string &in_serverip, const unsigned int in_port);
 
     void Disconnect(void);
 
-    int GetClientfd(void) const
-    {
-        return m_clientfd;
-    }
+    int GetClientfd(void) const { return m_clientfd; }
 
     /*
     向server发送数据
@@ -89,12 +83,15 @@ public:
     Param :
     std::shared_ptr<std::vector<uint8_t>>& pdata : 待发送数据
 
-    Return :
-    void
+    Return int : 0 -- 成功
+    -1 -- client error
+    -2 -- other error
     */
-    void Send(std::shared_ptr<std::vector<uint8_t>> &pdata);
+    int Send(std::shared_ptr<std::vector<uint8_t>> &pdata);
 
-protected:
+  protected:
+    int Init(void);
+
     /*
     启动线程
 
@@ -108,7 +105,9 @@ protected:
 
     int AddNewClient(void);
 
-private:
+    void disconnect_nolock(const int in_errNo);
+
+  private:
     // 禁用默认构造函数
     EpollClient_Core();
 };

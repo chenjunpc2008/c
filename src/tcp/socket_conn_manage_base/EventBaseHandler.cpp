@@ -14,8 +14,7 @@ EventBaseHandler::EventBaseHandler(void) {}
 
 EventBaseHandler::~EventBaseHandler(void) {}
 
-void EventBaseHandler::OnReceiveData(uint64_t cid,
-                                     std::vector<uint8_t> const &data)
+void EventBaseHandler::OnReceiveData(uint64_t cid, std::vector<uint8_t> const &data)
 {
     static const string ftag("EventBaseHandler::OnReceiveData() ");
 
@@ -62,14 +61,12 @@ void EventBaseHandler::OnClientDisconnect(uint64_t cid, int errorcode)
     cout << n_log::INFO << ftag << sDebug << endl;
 }
 
-void EventBaseHandler::OnDisconnect(uint64_t cid, int errorcode)
+void EventBaseHandler::OnDisconnect(int errorcode)
 {
     static const string ftag("EventBaseHandler::OnDisconnect() ");
 
     string strTran;
-    string sDebug = "id=";
-    sDebug += sof_string::itostr(cid, strTran);
-    sDebug += ", error=";
+    string sDebug = "error=";
     sDebug += sof_string::itostr(errorcode, strTran);
     sDebug += ", serror=";
     sDebug += strerror(errorcode);
